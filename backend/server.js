@@ -4,6 +4,7 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const seedData = require('./seedData.json');
 
 const loadEnvFile = (filePath) => {
   if (!fs.existsSync(filePath)) return;
@@ -203,6 +204,172 @@ db.getConnection((err, connection) => {
   console.log('Connected to MySQL database!');
 });
 
+const queryAsync = (sql, values = []) => db.promise().query(sql, values);
+
+const ensureCoreTables = async () => {
+  await queryAsync(`
+    CREATE TABLE IF NOT EXISTS categories (
+      id VARCHAR(80) PRIMARY KEY,
+      name VARCHAR(150) NOT NULL,
+      icon VARCHAR(80) DEFAULT 'Utensils',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await queryAsync(`
+    CREATE TABLE IF NOT EXISTS menu_items (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(180) NOT NULL,
+      description TEXT,
+      price INT NOT NULL DEFAULT 0,
+      original_price INT NULL,
+      image TEXT,
+      category_id VARCHAR(80),
+      is_popular TINYINT(1) DEFAULT 0,
+      is_new TINYINT(1) DEFAULT 0,
+      prep_time VARCHAR(50) DEFAULT '10 min',
+      status VARCHAR(50) DEFAULT 'Tersedia',
+      tags TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await queryAsync(`
+    CREATE TABLE IF NOT EXISTS customers (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(150) NOT NULL,
+      email VARCHAR(150) UNIQUE NOT NULL,
+      phone VARCHAR(50),
+      total_orders INT DEFAULT 0,
+      total_spent INT DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await queryAsync(`
+    CREATE TABLE IF NOT EXISTS orders (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      order_number VARCHAR(50) UNIQUE NOT NULL,
+      customer_id INT,
+      customer_name VARCHAR(150) NOT NULL,
+      customer_phone VARCHAR(50),
+      address TEXT,
+      note TEXT,
+      payment_method VARCHAR(50),
+      total INT NOT NULL DEFAULT 0,
+      status VARCHAR(80) DEFAULT 'Diproses',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await queryAsync(`
+    CREATE TABLE IF NOT EXISTS order_items (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      order_id INT NOT NULL,
+      menu_item_id INT NOT NULL,
+      quantity INT NOT NULL DEFAULT 1,
+      price INT NOT NULL DEFAULT 0,
+      item_note TEXT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await queryAsync(`
+    CREATE TABLE IF NOT EXISTS payments (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      order_id INT NOT NULL,
+      amount INT NOT NULL DEFAULT 0,
+      status VARCHAR(50) DEFAULT 'Pending',
+      proof_image TEXT NULL,
+      rejection_reason TEXT NULL,
+      verified_at TIMESTAMP NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await queryAsync(`
+    CREATE TABLE IF NOT EXISTS promos (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(150) NOT NULL,
+      type VARCHAR(50) DEFAULT 'percent',
+      discount_percent INT DEFAULT 0,
+      discount_nominal INT DEFAULT 0,
+      min_purchase INT DEFAULT 0,
+      start_date DATE NULL,
+      end_date DATE NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await queryAsync(`
+    CREATE TABLE IF NOT EXISTS gallery (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      title VARCHAR(150) NOT NULL,
+      type VARCHAR(80) DEFAULT 'food',
+      image_url TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await queryAsync(`
+    CREATE TABLE IF NOT EXISTS testimonials (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      customer_name VARCHAR(150) NOT NULL,
+      rating INT NOT NULL DEFAULT 5,
+      comment TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await queryAsync(`
+    CREATE TABLE IF NOT EXISTS settings (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      setting_key VARCHAR(120) UNIQUE NOT NULL,
+      setting_value TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+};
+
+const seedInitialMenu = async () => {
+  const [categoryRows] = await queryAsync('SELECT COUNT(*) AS total FROM categories');
+  if ((categoryRows[0]?.total || 0) === 0) {
+    const values = seedData.categories.map(category => [category.id, category.name, category.icon || 'Utensils']);
+    if (values.length > 0) {
+      await queryAsync('INSERT INTO categories (id, name, icon) VALUES ?', [values]);
+      console.log(`Seeded ${values.length} categories`);
+    }
+  }
+
+  const [menuRows] = await queryAsync('SELECT COUNT(*) AS total FROM menu_items');
+  if ((menuRows[0]?.total || 0) === 0) {
+    const values = seedData.menuItems.map(item => [
+      item.id,
+      item.name,
+      item.description,
+      item.price,
+      item.original_price,
+      item.image,
+      item.category_id,
+      item.is_popular ? 1 : 0,
+      item.is_new ? 1 : 0,
+      item.prep_time || '10 min',
+      item.status || 'Tersedia',
+      item.tags || ''
+    ]);
+
+    if (values.length > 0) {
+      await queryAsync(
+        `INSERT INTO menu_items
+          (id, name, description, price, original_price, image, category_id, is_popular, is_new, prep_time, status, tags)
+         VALUES ?`,
+        [values]
+      );
+      console.log(`Seeded ${values.length} menu items`);
+    }
+  }
+};
+
 const ensureColumn = (tableName, columnName, definition) => {
   const query = `
     SELECT COUNT(*) AS total
@@ -230,9 +397,6 @@ const ensureColumn = (tableName, columnName, definition) => {
   });
 };
 
-ensureColumn('order_items', 'item_note', 'TEXT NULL');
-ensureColumn('payments', 'rejection_reason', 'TEXT NULL');
-
 const normalizeMenuNames = () => {
   const updates = [
     {
@@ -259,8 +423,6 @@ const normalizeMenuNames = () => {
     );
   });
 };
-
-normalizeMenuNames();
 
 const ensureAuthUsers = () => {
   const createTable = `
@@ -300,7 +462,21 @@ const ensureAuthUsers = () => {
   });
 };
 
-ensureAuthUsers();
+const bootstrapDatabase = async () => {
+  try {
+    await ensureCoreTables();
+    await seedInitialMenu();
+    ensureColumn('order_items', 'item_note', 'TEXT NULL');
+    ensureColumn('payments', 'rejection_reason', 'TEXT NULL');
+    normalizeMenuNames();
+    ensureAuthUsers();
+    console.log('Database bootstrap completed');
+  } catch (err) {
+    console.error('Database bootstrap failed:', err.message);
+  }
+};
+
+bootstrapDatabase();
 
 app.post('/api/auth/login', (req, res) => {
   const { email, password, expectedRole } = req.body;
