@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import { apiFetch } from '../lib/api'
 
 const AuthContext = createContext()
 
@@ -37,7 +38,7 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password, expectedRole = 'user') => {
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await apiFetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, expectedRole })
@@ -65,7 +66,7 @@ export function AuthProvider({ children }) {
 
   const register = async (name, email, password) => {
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await apiFetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password })
