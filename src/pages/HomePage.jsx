@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { getMenuItems, formatPrice, optimizeImageUrl } from '../data/menuData'
 import { useCart } from '../context/CartContext'
+import { useAuth } from '../context/AuthContext'
 import AddOnModal from '../components/AddOnModal'
 
 const howItWorks = [
@@ -32,6 +33,7 @@ const desktopStats = [
 
 export default function HomePage() {
   const { addItem } = useCart()
+  const { user } = useAuth()
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   const [menuList, setMenuList] = useState([])
@@ -42,6 +44,10 @@ export default function HomePage() {
   }, [])
 
   const popularItems = menuList.filter(item => item.isPopular).slice(0, 6)
+  const userInitials = user?.name
+    ? user.name.split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase()
+    : 'CB'
+  const greetingName = user?.name?.split(' ')[0] || 'Couple Bowl'
 
   const handleAddToCart = (item) => {
     setSelectedAddOnItem(item)
@@ -70,9 +76,9 @@ export default function HomePage() {
         <div className="home-mobile-header">
           <div>
             <div style={{ fontSize: 13, color: '#9CA3AF', fontWeight: 500, marginBottom: 2 }}>Welcome back</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: '#1F2937' }}>Couple Bowl</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: '#1F2937' }}>{greetingName}</div>
           </div>
-          <Link to="/profile" className="home-mobile-avatar">CB</Link>
+          <Link to={user ? '/profile' : '/login'} className="home-mobile-avatar">{userInitials}</Link>
         </div>
 
         {/* Search (mobile) */}
