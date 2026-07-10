@@ -285,11 +285,23 @@ body {
   z-index: 50;
 }
 
+.bottom-nav-items {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
 .tab-item {
   display: flex; flex-direction: column; align-items: center;
-  gap: 2px; padding: 4px 0; font-size: 11px; font-weight: 500;
+  gap: 2px; padding: 4px 0; font-size: 10px; font-weight: 600;
   color: #9CA3AF; cursor: pointer; transition: all 0.3s ease;
-  position: relative; flex: 1;
+  position: relative; flex: 1; min-width: 0;
+}
+.tab-item span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .tab-item.active { color: #DC2626; }
 .tab-item.active::after {

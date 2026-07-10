@@ -1,10 +1,11 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { Home, UtensilsCrossed, ShoppingCart, User } from 'lucide-react'
+import { Home, UtensilsCrossed, ShoppingCart, User, Zap } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 
 const navItems = [
   { to: '/', label: 'Home', icon: Home },
   { to: '/menu', label: 'Menu', icon: UtensilsCrossed },
+  { to: '/smart-order', label: 'Smart', icon: Zap },
   { to: '/cart', label: 'Cart', icon: ShoppingCart },
   { to: '/profile', label: 'Profile', icon: User },
 ]
@@ -20,7 +21,7 @@ export default function BottomNav() {
 
   return (
     <nav className="bottom-nav">
-      <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
+      <div className="bottom-nav-items">
         {navItems.map(({ to, label, icon: Icon }) => {
           const isActive = location.pathname === to || 
             (to !== '/' && location.pathname.startsWith(to))
