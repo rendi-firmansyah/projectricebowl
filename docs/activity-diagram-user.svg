@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="2160" viewBox="0 0 1200 2160">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#222"/>
+    </marker>
+    <style>
+      .title { font-family: "Times New Roman", serif; font-size: 28px; font-weight: 700; fill: #111; }
+      .text { font-family: "Times New Roman", serif; font-size: 19px; fill: #111; text-anchor: middle; dominant-baseline: middle; }
+      .small { font-family: "Times New Roman", serif; font-size: 16px; fill: #111; text-anchor: middle; dominant-baseline: middle; }
+      .label { font-family: "Times New Roman", serif; font-size: 17px; fill: #111; text-anchor: middle; }
+      .box { fill: #fff; stroke: #222; stroke-width: 2; }
+      .line { stroke: #222; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+      .plain { stroke: #222; stroke-width: 2; fill: none; }
+    </style>
+  </defs>
+
+  <!-- outer frame and swimlanes -->
+  <rect x="30" y="30" width="1140" height="2100" fill="#fff" stroke="#222" stroke-width="2"/>
+  <line x1="30" y1="100" x2="1170" y2="100" stroke="#222" stroke-width="2"/>
+  <line x1="600" y1="30" x2="600" y2="2130" stroke="#222" stroke-width="2"/>
+  <text x="315" y="72" class="title" text-anchor="middle">USER</text>
+  <text x="885" y="72" class="title" text-anchor="middle">SYSTEM</text>
+
+  <!-- start -->
+  <circle cx="315" cy="145" r="17" fill="#000" stroke="#e11d48" stroke-width="4"/>
+  <line x1="315" y1="164" x2="315" y2="220" class="line"/>
+
+  <!-- row 1 -->
+  <rect x="215" y="220" width="200" height="82" class="box"/>
+  <text x="315" y="251" class="text">MENGAKSES</text>
+  <text x="315" y="276" class="text">WEBSITE</text>
+  <line x1="415" y1="261" x2="735" y2="261" class="line"/>
+  <rect x="735" y="220" width="250" height="82" class="box"/>
+  <text x="860" y="251" class="text">MENAMPILKAN</text>
+  <text x="860" y="276" class="text">HALAMAN UTAMA</text>
+  <line x1="315" y1="302" x2="315" y2="365" class="line"/>
+
+  <!-- choose order method -->
+  <rect x="215" y="365" width="200" height="82" class="box"/>
+  <text x="315" y="394" class="text">MEMILIH</text>
+  <text x="315" y="419" class="text">METODE PESAN</text>
+  <line x1="415" y1="406" x2="735" y2="406" class="line"/>
+  <rect x="735" y="365" width="250" height="82" class="box"/>
+  <text x="860" y="394" class="text">MENAMPILKAN</text>
+  <text x="860" y="419" class="text">MENU / SMART ORDER</text>
+  <line x1="315" y1="447" x2="315" y2="515" class="line"/>
+
+  <!-- decision order source -->
+  <polygon points="315,515 410,610 315,705 220,610" class="box"/>
+  <text x="315" y="598" class="text">PILIH</text>
+  <text x="315" y="623" class="text">CARA PESAN?</text>
+
+  <!-- menu branch -->
+  <text x="173" y="575" class="label">MENU</text>
+  <path d="M220 610 H130 V790 H190" class="line"/>
+  <rect x="190" y="750" width="250" height="82" class="box"/>
+  <text x="315" y="779" class="text">MEMILIH MENU</text>
+  <text x="315" y="804" class="text">DAN JUMLAH</text>
+  <line x1="440" y1="791" x2="735" y2="791" class="line"/>
+  <rect x="735" y="750" width="250" height="82" class="box"/>
+  <text x="860" y="779" class="text">MENAMPILKAN</text>
+  <text x="860" y="804" class="text">DAFTAR MENU</text>
+
+  <!-- smart order branch -->
+  <text x="478" y="575" class="label">SMART ORDER</text>
+  <path d="M410 610 H500 V915 H440" class="line"/>
+  <rect x="190" y="875" width="250" height="82" class="box"/>
+  <text x="315" y="904" class="text">MENGETIK</text>
+  <text x="315" y="929" class="text">PESANAN NATURAL</text>
+  <line x1="440" y1="916" x2="735" y2="916" class="line"/>
+  <rect x="735" y="875" width="250" height="82" class="box"/>
+  <text x="860" y="893" class="text">MEMPROSES NLP,</text>
+  <text x="860" y="918" class="text">REKOMENDASI,</text>
+  <text x="860" y="943" class="text">DAN CATATAN ITEM</text>
+
+  <!-- merge to cart -->
+  <path d="M315 832 V1035" class="line"/>
+  <path d="M315 957 V1035" class="line"/>
+  <rect x="190" y="1035" width="250" height="82" class="box"/>
+  <text x="315" y="1064" class="text">MENAMBAHKAN</text>
+  <text x="315" y="1089" class="text">KE KERANJANG</text>
+  <line x1="440" y1="1076" x2="735" y2="1076" class="line"/>
+  <rect x="735" y="1035" width="250" height="82" class="box"/>
+  <text x="860" y="1064" class="text">MENAMPILKAN</text>
+  <text x="860" y="1089" class="text">RINGKASAN CART</text>
+  <line x1="315" y1="1117" x2="315" y2="1185" class="line"/>
+
+  <!-- login decision -->
+  <polygon points="315,1185 410,1280 315,1375 220,1280" class="box"/>
+  <text x="315" y="1268" class="text">SUDAH</text>
+  <text x="315" y="1293" class="text">LOGIN?</text>
+
+  <text x="173" y="1245" class="label">BELUM</text>
+  <path d="M220 1280 H130 V1455 H190" class="line"/>
+  <rect x="190" y="1415" width="250" height="82" class="box"/>
+  <text x="315" y="1444" class="text">LOGIN /</text>
+  <text x="315" y="1469" class="text">REGISTER</text>
+  <line x1="440" y1="1456" x2="735" y2="1456" class="line"/>
+  <rect x="735" y="1415" width="250" height="82" class="box"/>
+  <text x="860" y="1444" class="text">VALIDASI AUTH</text>
+  <text x="860" y="1469" class="text">DAN TOKEN</text>
+  <path d="M315 1497 V1540" class="line"/>
+
+  <text x="478" y="1245" class="label">SUDAH</text>
+  <path d="M410 1280 H500 V1540 H440" class="line"/>
+
+  <!-- checkout -->
+  <rect x="190" y="1540" width="250" height="82" class="box"/>
+  <text x="315" y="1569" class="text">MELAKUKAN</text>
+  <text x="315" y="1594" class="text">CHECKOUT</text>
+  <line x1="440" y1="1581" x2="735" y2="1581" class="line"/>
+  <rect x="735" y="1540" width="250" height="82" class="box"/>
+  <text x="860" y="1569" class="text">MENAMPILKAN FORM</text>
+  <text x="860" y="1594" class="text">ALAMAT & PEMBAYARAN</text>
+  <line x1="315" y1="1622" x2="315" y2="1690" class="line"/>
+
+  <!-- payment decision -->
+  <polygon points="315,1690 410,1785 315,1880 220,1785" class="box"/>
+  <text x="315" y="1773" class="text">METODE</text>
+  <text x="315" y="1798" class="text">BAYAR?</text>
+
+  <text x="157" y="1750" class="label">TRANSFER / QRIS</text>
+  <path d="M220 1785 H130 V1950 H190" class="line"/>
+  <rect x="190" y="1910" width="250" height="82" class="box"/>
+  <text x="315" y="1939" class="text">UPLOAD BUKTI</text>
+  <text x="315" y="1964" class="text">PEMBAYARAN</text>
+  <line x1="440" y1="1951" x2="735" y2="1951" class="line"/>
+  <rect x="735" y="1910" width="250" height="82" class="box"/>
+  <text x="860" y="1939" class="text">MENYIMPAN ORDER</text>
+  <text x="860" y="1964" class="text">STATUS MENUNGGU</text>
+
+  <text x="468" y="1750" class="label">COD</text>
+  <path d="M410 1785 H500 V1830 H735" class="line"/>
+  <rect x="735" y="1790" width="250" height="82" class="box"/>
+  <text x="860" y="1819" class="text">MENYIMPAN ORDER</text>
+  <text x="860" y="1844" class="text">STATUS DIPROSES</text>
+
+  <!-- final -->
+  <path d="M315 1992 V2028" class="line"/>
+  <rect x="190" y="2028" width="250" height="42" class="box"/>
+  <text x="315" y="2049" class="small">MELIHAT STATUS & INVOICE</text>
+  <path d="M735 1831 V2020 H440" class="line"/>
+  <path d="M735 1951 V2020 H440" class="line"/>
+
+  <circle cx="315" cy="2085" r="17" fill="#000" stroke="#e11d48" stroke-width="4"/>
+  <circle cx="315" cy="2085" r="25" fill="none" stroke="#e11d48" stroke-width="3"/>
+  <line x1="315" y1="2070" x2="315" y2="2058" class="plain"/>
+</svg>
