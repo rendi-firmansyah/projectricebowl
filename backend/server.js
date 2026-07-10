@@ -40,6 +40,22 @@ const requireProductionEnv = (key, fallback) => {
   return value;
 };
 
+const envValue = (...keys) => {
+  for (const key of keys) {
+    const value = process.env[key];
+    if (value !== undefined && value !== '') return value;
+  }
+  return undefined;
+};
+
+const requireAnyProductionEnv = (label, keys, fallback) => {
+  const value = envValue(...keys) ?? fallback;
+  if (isProduction && (value === undefined || value === '')) {
+    throw new Error(`${label} environment variable is required in production. Set one of: ${keys.join(', ')}`);
+  }
+  return value;
+};
+
 const app = express();
 const port = Number(process.env.PORT || 5000);
 const uploadDir = path.join(__dirname, 'uploads');
@@ -161,12 +177,20 @@ const sendAdminEvent = (event, data) => {
   adminEventClients.forEach(client => client.write(payload));
 };
 
+const dbConfig = {
+  host: requireAnyProductionEnv('Database host', ['DB_HOST', 'MYSQLHOST']),
+  port: Number(envValue('DB_PORT', 'MYSQLPORT') || 3306),
+  user: requireAnyProductionEnv('Database user', ['DB_USER', 'MYSQLUSER'], 'root'),
+  password: requireAnyProductionEnv('Database password', ['DB_PASSWORD', 'MYSQLPASSWORD'], ''),
+  database: requireAnyProductionEnv('Database name', ['DB_NAME', 'MYSQLDATABASE'], 'rendiweb_db')
+};
+
 const db = mysql.createPool({
-  ...(requireProductionEnv('DB_HOST') ? { host: requireProductionEnv('DB_HOST') } : {}),
-  port: Number(process.env.DB_PORT || 3306),
-  user: requireProductionEnv('DB_USER', 'root'),
-  password: requireProductionEnv('DB_PASSWORD', ''),
-  database: requireProductionEnv('DB_NAME', 'rendiweb_db'),
+  host: dbConfig.host,
+  port: dbConfig.port,
+  user: dbConfig.user,
+  password: dbConfig.password,
+  database: dbConfig.database,
   ...(process.env.DB_SSL === 'true' ? { ssl: { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' } } : {}),
   waitForConnections: true,
   connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 10),
