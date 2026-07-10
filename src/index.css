@@ -1473,6 +1473,40 @@ body {
   padding-left: 44px !important;
 }
 
+.login-password-input {
+  padding-right: 46px !important;
+}
+
+.login-password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #6B7280;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.login-password-toggle:hover:not(:disabled),
+.login-password-toggle:focus-visible {
+  background: #F3F4F6;
+  color: #111827;
+  outline: none;
+}
+
+.login-password-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .login-submit-btn {
   width: 100%;
   padding: 14px !important;

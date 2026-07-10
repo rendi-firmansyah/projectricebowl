@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Mail, Lock, User, LogIn, Sparkles, AlertCircle, Shield, ArrowLeft } from 'lucide-react'
+import { Mail, Lock, User, LogIn, Sparkles, AlertCircle, Shield, ArrowLeft, Eye, EyeOff } from 'lucide-react'
 
 export default function LoginPage() {
   const { user, admin, login, register } = useAuth()
@@ -18,6 +18,7 @@ export default function LoginPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   
   // UI states
   const [error, setError] = useState('')
@@ -180,13 +181,23 @@ export default function LoginPage() {
             <div className="login-input-wrapper">
               <Lock size={18} className="login-input-icon" />
               <input 
-                type="password" 
-                className="input-field login-input" 
+                type={showPassword ? 'text' : 'password'} 
+                className="input-field login-input login-password-input" 
                 placeholder="********"
                 value={password} 
                 onChange={e => setPassword(e.target.value)}
                 disabled={loading}
               />
+              <button
+                type="button"
+                className="login-password-toggle"
+                onClick={() => setShowPassword(value => !value)}
+                disabled={loading}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           </div>
 
