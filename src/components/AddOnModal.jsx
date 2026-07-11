@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { X, Plus, Minus } from 'lucide-react'
 import { formatPrice, optimizeImageUrl } from '../data/menuData'
 import {
@@ -13,13 +13,17 @@ import {
 export default function AddOnModal({ item, onClose, onConfirm }) {
   const [quantity, setQuantity] = useState(1)
   const [customization, setCustomization] = useState(() => getDefaultCustomization(item || {}))
-  const [note, setNote] = useState('')
+  const noteRef = useRef('')
+  const noteInputRef = useRef(null)
 
   useEffect(() => {
     if (!item) return
     setQuantity(1)
     setCustomization(getDefaultCustomization(item))
-    setNote('')
+    noteRef.current = ''
+    if (noteInputRef.current) {
+      noteInputRef.current.value = ''
+    }
   }, [item])
 
   if (!item) return null
@@ -46,7 +50,7 @@ export default function AddOnModal({ item, onClose, onConfirm }) {
     const configuredItem = {
       ...item,
       customization,
-      note,
+      note: noteRef.current,
     }
 
     onConfirm(configuredItem, quantity, buildItemNote(configuredItem))
@@ -134,11 +138,17 @@ export default function AddOnModal({ item, onClose, onConfirm }) {
           <div>
             <div style={{ fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 8 }}>Catatan Tambahan</div>
             <input
+              ref={noteInputRef}
               className="input-field"
-              value={note}
-              onChange={event => setNote(event.target.value)}
+              defaultValue=""
+              type="text"
+              inputMode="text"
+              autoComplete="off"
+              onInput={event => {
+                noteRef.current = event.currentTarget.value
+              }}
               placeholder="Contoh: saus dipisah, tanpa bawang"
-              style={{ padding: '11px 13px', fontSize: 13 }}
+              style={{ padding: '12px 13px', fontSize: 16 }}
             />
           </div>
 
