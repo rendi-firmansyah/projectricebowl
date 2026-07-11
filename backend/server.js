@@ -67,6 +67,7 @@ const clientOrigins = (requireProductionEnv('CLIENT_URL', '') || '')
   .split(',')
   .map(origin => origin.trim())
   .filter(Boolean);
+const vercelProjectPrefix = process.env.VERCEL_PROJECT_PREFIX || 'projectricebowl';
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -77,12 +78,37 @@ app.set('trust proxy', 1);
 
 const allowAnyDevOrigin = !isProduction && clientOrigins.length === 0;
 
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+  if (allowAnyDevOrigin) return true;
+  if (clientOrigins.includes(origin)) return true;
+
+  try {
+    const { hostname, protocol } = new URL(origin);
+
+    if (
+      protocol === 'https:' &&
+      hostname.endsWith('.vercel.app') &&
+      (hostname === `${vercelProjectPrefix}.vercel.app` || hostname.startsWith(`${vercelProjectPrefix}-`))
+    ) {
+      return true;
+    }
+
+    return clientOrigins.some(allowedOrigin => {
+      if (!allowedOrigin.includes('*')) return false;
+      const pattern = allowedOrigin
+        .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+        .replace(/\\\*/g, '.*');
+      return new RegExp(`^${pattern}$`).test(origin);
+    });
+  } catch {
+    return false;
+  }
+};
+
 app.use(cors({
   origin(origin, callback) {
-    if (!origin) return callback(null, true);
-    if (allowAnyDevOrigin) return callback(null, true);
-    if (clientOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error('Not allowed by CORS'));
+    return callback(null, isAllowedOrigin(origin));
   },
   credentials: true
 }));
