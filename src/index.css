@@ -592,6 +592,30 @@ body {
 .profile-stat-divider { width: 1px; background: rgba(255,255,255,0.3); }
 .profile-body { padding: 20px; margin-top: -16px; }
 .profile-layout { display: flex; flex-direction: column; gap: 20px; }
+.profile-layout.panel-open .profile-menu-col {
+  display: none;
+}
+.profile-layout:not(.panel-open) .profile-orders-col {
+  display: none;
+}
+.profile-panel-mobile-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.profile-panel-back {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  background: white;
+  color: #1F2937;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
 .profile-menu-card {
   background: white; border-radius: 16px; overflow: hidden;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #F3F4F6;
@@ -1036,6 +1060,13 @@ body {
     display: grid !important;
     grid-template-columns: 1fr 2fr !important;
     gap: 32px !important;
+  }
+  .profile-layout.panel-open .profile-menu-col,
+  .profile-layout:not(.panel-open) .profile-orders-col {
+    display: block;
+  }
+  .profile-panel-mobile-head {
+    display: none;
   }
   .profile-menu-card { border-radius: 20px; }
   .profile-order-card { border-radius: 16px; padding: 18px; }

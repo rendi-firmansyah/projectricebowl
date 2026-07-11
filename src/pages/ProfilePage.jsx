@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronRight, Settings, Bell, HelpCircle, LogOut, Package, Heart, MapPin, CreditCard, Eye, ReceiptText, Trash2 } from 'lucide-react'
+import { ChevronRight, Settings, Bell, HelpCircle, LogOut, Package, Heart, MapPin, CreditCard, Eye, ReceiptText, Trash2, ArrowLeft } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { formatPrice, getMenuItems, optimizeImageUrl } from '../data/menuData'
 import { readFavoriteIds, saveFavoriteIds } from '../lib/favorites'
@@ -31,7 +31,7 @@ export default function ProfilePage() {
   const { user, logout } = useAuth()
   const [orders, setOrders] = useState([])
   const [selectedOrder, setSelectedOrder] = useState(null)
-  const [activePanel, setActivePanel] = useState('orders')
+  const [activePanel, setActivePanel] = useState('menu')
   const [favoriteIds, setFavoriteIds] = useState([])
   const [menuList, setMenuList] = useState([])
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
@@ -91,6 +91,7 @@ export default function ProfilePage() {
   }
 
   const favoriteItems = menuList.filter(item => favoriteIds.includes(String(item.id)))
+  const activeMenu = menuLinks.find(item => item.id === activePanel) || menuLinks[0]
 
   const removeFavorite = (itemId) => {
     setFavoriteIds(saveFavoriteIds(user?.email, favoriteIds.filter(id => id !== String(itemId))))
@@ -243,7 +244,7 @@ export default function ProfilePage() {
       </div>
 
       <div className="profile-body">
-        <div className="profile-layout">
+        <div className={`profile-layout ${activePanel !== 'menu' ? 'panel-open' : ''}`}>
           <div className="profile-menu-col">
             <div className="profile-menu-card">
               {menuLinks.map((item) => (
@@ -260,6 +261,15 @@ export default function ProfilePage() {
           </div>
 
           <div className="profile-orders-col">
+            <div className="profile-panel-mobile-head">
+              <button type="button" className="profile-panel-back" onClick={() => setActivePanel('menu')}>
+                <ArrowLeft size={18} />
+              </button>
+              <div>
+                <div style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 700 }}>Profile</div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: '#1F2937' }}>{activeMenu.label}</div>
+              </div>
+            </div>
             {renderActivePanel()}
           </div>
         </div>
