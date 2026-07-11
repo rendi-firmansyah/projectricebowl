@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { ChevronLeft, MapPin, CreditCard, ArrowRight, Upload, X } from 'lucide-react'
 import { useCart } from '../context/CartContext'
@@ -28,8 +28,10 @@ export default function CheckoutPage() {
   const { user } = useAuth()
   
   const [selectedPayment, setSelectedPayment] = useState('transfer')
-  const [address, setAddress] = useState('Jl. Sudirman No. 123, Jakarta Pusat')
-  const [note, setNote] = useState('')
+  const defaultAddress = 'Jl. Sudirman No. 123, Jakarta Pusat'
+  const addressRef = useRef(null)
+  const orderNoteRef = useRef(null)
+  const itemNoteRefs = useRef({})
   
   const [copied, setCopied] = useState(false)
   const [proofImage, setProofImage] = useState(null)
@@ -73,8 +75,8 @@ export default function CheckoutPage() {
         customer_name: user?.name || 'Guest',
         customer_email: user?.email || '',
         customer_phone: '',
-        address: address,
-        note: note,
+        address: addressRef.current?.value || defaultAddress,
+        note: orderNoteRef.current?.value || '',
         payment_method: selectedPayment,
         total: total,
         items: items.map(item => ({
@@ -83,7 +85,10 @@ export default function CheckoutPage() {
           quantity: item.quantity,
           price: getItemUnitPrice(item),
           image: item.image,
-          note: buildItemNote(item)
+          note: buildItemNote({
+            ...item,
+            note: itemNoteRefs.current[item.cartKey] ?? item.note ?? ''
+          })
         })),
         proof_image: proofImage || null
       }
@@ -142,7 +147,14 @@ export default function CheckoutPage() {
               <MapPin size={18} color="#DC2626" />
               <span style={{ fontSize: 15, fontWeight: 700 }}>Delivery Address</span>
             </div>
-            <input className="input-field" value={address} onChange={e => setAddress(e.target.value)} placeholder="Enter your address" />
+            <input
+              ref={addressRef}
+              className="input-field"
+              defaultValue={defaultAddress}
+              placeholder="Enter your address"
+              autoComplete="street-address"
+              style={{ fontSize: 16 }}
+            />
           </div>
 
           {/* Order Items */}
@@ -244,11 +256,20 @@ export default function CheckoutPage() {
                 )}
 
                 <input
+                  ref={element => {
+                    if (element) itemNoteRefs.current[item.cartKey] = element.value
+                  }}
                   className="input-field"
-                  value={item.note || ''}
-                  onChange={e => updateItemNote(item.cartKey, e.target.value)}
+                  defaultValue={item.note || ''}
+                  onInput={e => {
+                    itemNoteRefs.current[item.cartKey] = e.currentTarget.value
+                  }}
+                  onBlur={e => updateItemNote(item.cartKey, e.currentTarget.value)}
+                  type="text"
+                  inputMode="text"
+                  autoComplete="off"
                   placeholder="Catatan tambahan, contoh: tanpa bawang, saus dipisah"
-                  style={{ marginTop: 10, padding: '10px 12px', fontSize: 13 }}
+                  style={{ marginTop: 10, padding: '11px 12px', fontSize: 16 }}
                 />
               </div>
             ))}
@@ -257,7 +278,13 @@ export default function CheckoutPage() {
           {/* Note */}
           <div className="checkout-card">
             <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Note (Optional)</h3>
-            <textarea className="input-field" value={note} onChange={e => setNote(e.target.value)} placeholder="Add special instructions..." rows={3} style={{ resize: 'none' }} />
+            <textarea
+              ref={orderNoteRef}
+              className="input-field"
+              placeholder="Add special instructions..."
+              rows={3}
+              style={{ resize: 'none', fontSize: 16 }}
+            />
           </div>
 
           {/* Payment Method */}
