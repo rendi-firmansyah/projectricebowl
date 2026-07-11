@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Search, Star, Clock, Plus, Sparkles, Filter, Grid3X3, List } from 'lucide-react'
+import { Search, Star, Clock, Plus, Sparkles, Filter, Grid3X3, List, Heart } from 'lucide-react'
 import { getMenuItems, formatPrice, optimizeImageUrl } from '../data/menuData'
 import { useCart } from '../context/CartContext'
+import { useAuth } from '../context/AuthContext'
+import { readFavoriteIds, toggleFavoriteId } from '../lib/favorites'
 import AddOnModal from '../components/AddOnModal'
 
 export default function MenuPage() {
@@ -13,12 +15,18 @@ export default function MenuPage() {
   const [menuList, setMenuList] = useState([])
   const [categories, setCategories] = useState([])
   const [selectedAddOnItem, setSelectedAddOnItem] = useState(null)
+  const [favoriteIds, setFavoriteIds] = useState([])
   const { addItem } = useCart()
+  const { user } = useAuth()
 
   useEffect(() => {
     getMenuItems().then(data => setMenuList(data))
     fetch('/api/categories').then(r=>r.json()).then(data => setCategories(data)).catch(console.error)
   }, [])
+
+  useEffect(() => {
+    setFavoriteIds(readFavoriteIds(user?.email))
+  }, [user?.email])
 
   const filteredItems = menuList.filter(item => {
     const matchCat = activeCategory === 'all' || item.category_id === activeCategory || item.category === activeCategory
@@ -28,6 +36,16 @@ export default function MenuPage() {
 
   const handleAdd = (item) => {
     setSelectedAddOnItem(item)
+  }
+
+  const handleToggleFavorite = (item) => {
+    const nextFavorites = toggleFavoriteId(user?.email, item.id)
+    const isFavorite = nextFavorites.includes(String(item.id))
+
+    setFavoriteIds(nextFavorites)
+    setToastMessage(isFavorite ? `${item.name} added to favorites` : `${item.name} removed from favorites`)
+    setShowToast(true)
+    setTimeout(() => setShowToast(false), 2000)
   }
 
   const handleConfirmAdd = (item, quantity) => {
@@ -89,6 +107,15 @@ export default function MenuPage() {
             <div key={item.id} className={`animate-fade-in card-hover menu-item-card ${viewMode}`} style={{ animationDelay: `${i * 0.04}s`, opacity: 0 }}>
               <div className="menu-item-image">
                 <img src={optimizeImageUrl(item.image, viewMode === 'list' ? 220 : 360)} alt={item.name} loading="lazy" decoding="async" />
+                <button
+                  type="button"
+                  className={`menu-favorite-btn ${favoriteIds.includes(String(item.id)) ? 'active' : ''}`}
+                  onClick={() => handleToggleFavorite(item)}
+                  aria-label={favoriteIds.includes(String(item.id)) ? 'Remove from favorites' : 'Add to favorites'}
+                  title={favoriteIds.includes(String(item.id)) ? 'Remove from favorites' : 'Add to favorites'}
+                >
+                  <Heart size={16} fill={favoriteIds.includes(String(item.id)) ? 'currentColor' : 'none'} />
+                </button>
                 {item.isNew && (
                   <div className="menu-item-badge new"><Sparkles size={8} /> NEW</div>
                 )}

@@ -447,6 +447,29 @@ body {
 }
 .menu-item-badge.new { background: #10B981; }
 .menu-item-badge.sale { background: #DC2626; }
+.menu-favorite-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.92);
+  color: #9CA3AF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(15,23,42,0.14);
+  transition: transform 0.2s ease, color 0.2s ease, background 0.2s ease;
+  z-index: 2;
+}
+.menu-favorite-btn.active {
+  color: #DC2626;
+  background: #fff;
+}
+.menu-favorite-btn:hover { transform: scale(1.08); }
 .menu-item-info { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
 .menu-item-info-top { display: flex; flex-direction: column; }
 .menu-item-name { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
@@ -574,8 +597,15 @@ body {
   box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #F3F4F6;
 }
 .profile-menu-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
   display: flex; align-items: center; gap: 14px; padding: 14px 16px;
   border-bottom: 1px solid #F9FAFB; cursor: pointer;
+}
+.profile-menu-item.active {
+  background: #FEF2F2;
 }
 .profile-menu-item:last-child { border-bottom: none; }
 .profile-menu-icon {
@@ -593,6 +623,46 @@ body {
 .profile-order-card {
   background: white; border-radius: 14px; padding: 14px; margin-bottom: 10px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #F3F4F6;
+}
+.profile-panel-card {
+  background: white;
+  border-radius: 14px;
+  padding: 16px;
+  border: 1px solid #F3F4F6;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.profile-favorites-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.profile-favorite-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: white;
+  border: 1px solid #F3F4F6;
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.profile-favorite-item img {
+  width: 58px;
+  height: 58px;
+  border-radius: 12px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.profile-icon-action,
+.profile-setting-toggle {
+  border: 1px solid #FEE2E2;
+  background: #FEF2F2;
+  color: #DC2626;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
 }
 
 /* ======================== MOBILE SMART ORDER PAGE ======================== */
