@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Search, Filter, Plus, Edit2, Trash2 } from 'lucide-react'
-import { formatPrice } from '../../data/menuData'
+import { formatPrice, optimizeImageUrl } from '../../data/menuData'
 
 const cs = {
   card: { background:'#fff', border:'1px solid #e2e8f0', borderRadius:16, overflow:'hidden', boxShadow:'0 1px 3px rgba(0,0,0,0.04)' },
@@ -85,7 +85,7 @@ export default function MenuListView({ onAdd, onEdit }) {
                   <td style={cs.td}><span style={{fontWeight:600,color:'#94a3b8'}}>#{item.id}</span></td>
                   <td style={cs.td}>
                     <div style={{display:'flex',alignItems:'center',gap:12}}>
-                      <img src={item.image} alt={item.name} style={{width:44,height:44,borderRadius:10,objectFit:'cover',border:'1px solid #e2e8f0'}}/>
+                      <img src={optimizeImageUrl(item.image)} alt={item.name} style={{width:44,height:44,borderRadius:10,objectFit:'cover',border:'1px solid #e2e8f0'}}/>
                       <div>
                         <div style={{fontWeight:700,fontSize:14,color:'#0f172a',marginBottom:2}}>{item.name}</div>
                         <div style={{display:'flex',gap:4}}>

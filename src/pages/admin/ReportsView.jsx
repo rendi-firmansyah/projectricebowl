@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { BarChart3, TrendingUp, Crown, Calendar, DollarSign, ShoppingCart, ArrowUpRight, ArrowDownRight } from 'lucide-react'
-import { formatPrice } from '../../data/menuData'
+import { formatPrice, optimizeImageUrl } from '../../data/menuData'
 
 const cs = {
   card: { background:'#fff', border:'1px solid #e2e8f0', borderRadius:16, padding:24, boxShadow:'0 1px 3px rgba(0,0,0,0.04)' },
@@ -277,7 +277,7 @@ function TopMenuReport() {
               return (
                 <div key={item.id} style={{display:'flex',alignItems:'center',gap:14,padding:12,borderRadius:12,background: i === 0 ? '#fffbeb' : 'transparent',border: i === 0 ? '1px solid #fde68a' : '1px solid transparent'}}>
                   <div style={{width:36,height:36,borderRadius:'50%',background: i < 3 ? medalColors[i] : '#f1f5f9',color: i < 3 ? '#fff' : '#475569',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:14,flexShrink:0}}>#{i+1}</div>
-                  <img src={item.image} alt={item.name} style={{width:44,height:44,borderRadius:10,objectFit:'cover',flexShrink:0}}/>
+                  <img src={optimizeImageUrl(item.image)} alt={item.name} style={{width:44,height:44,borderRadius:10,objectFit:'cover',flexShrink:0}}/>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:14,fontWeight:700,color:'#0f172a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.name}</div>
                     <div style={{fontSize:12,color:'#64748b'}}>{item.reviews || 0} ulasan - Rating {item.rating || 0}</div>
@@ -298,7 +298,7 @@ function TopMenuReport() {
             {topByRating.map((item, i) => (
               <div key={item.id} style={{display:'flex',alignItems:'center',gap:14,padding:12,borderRadius:12,background: i === 0 ? '#fef3c7' : 'transparent',border: i === 0 ? '1px solid #fde68a' : '1px solid transparent'}}>
                 <div style={{width:36,height:36,borderRadius:'50%',background:'#fef2f2',color:'#dc2626',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:14,flexShrink:0}}>#{i+1}</div>
-                <img src={item.image} alt={item.name} style={{width:44,height:44,borderRadius:10,objectFit:'cover',flexShrink:0}}/>
+                <img src={optimizeImageUrl(item.image)} alt={item.name} style={{width:44,height:44,borderRadius:10,objectFit:'cover',flexShrink:0}}/>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:14,fontWeight:700,color:'#0f172a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.name}</div>
                   <div style={{fontSize:12,color:'#64748b'}}>{item.reviews || 0} ulasan</div>
@@ -335,7 +335,7 @@ function TopMenuReport() {
                   <td style={cs.td}><span style={{fontWeight:700,color: i < 3 ? '#dc2626' : '#94a3b8'}}>{i+1}</span></td>
                   <td style={cs.td}>
                     <div style={{display:'flex',alignItems:'center',gap:12}}>
-                      <img src={item.image} alt={item.name} style={{width:40,height:40,borderRadius:8,objectFit:'cover'}}/>
+                      <img src={optimizeImageUrl(item.image)} alt={item.name} style={{width:40,height:40,borderRadius:8,objectFit:'cover'}}/>
                       <div>
                         <div style={{fontWeight:700,fontSize:14}}>{item.name}</div>
                         <div style={{display:'flex',gap:4,marginTop:2}}>

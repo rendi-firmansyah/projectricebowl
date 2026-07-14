@@ -113,6 +113,12 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json({ limit: process.env.JSON_LIMIT || '10mb' }));
+app.use('/api', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
 app.use('/uploads', express.static(uploadDir));
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'couple-bowl-api' });
@@ -357,6 +363,21 @@ const ensureCoreTables = async () => {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  // Self-healing check: ensure rating and reviews columns exist on menu_items
+  try {
+    await queryAsync('ALTER TABLE menu_items ADD COLUMN rating DECIMAL(3,2) DEFAULT 4.50');
+    console.log('Added rating column to menu_items');
+  } catch (err) {
+    // Column already exists or table is not ready
+  }
+
+  try {
+    await queryAsync('ALTER TABLE menu_items ADD COLUMN reviews INT DEFAULT 0');
+    console.log('Added reviews column to menu_items');
+  } catch (err) {
+    // Column already exists or table is not ready
+  }
 };
 
 const seedInitialMenu = async () => {
@@ -671,21 +692,35 @@ app.get('/api/menu', (req, res) => {
 app.post('/api/menu', requireAdmin, (req, res) => {
   const { name, description, price, original_price, image, category_id, is_popular, is_new, prep_time } = req.body;
   const storedImage = saveDataUrlImage(image, 'menu');
+  const isPopularVal = (is_popular === true || is_popular === 1 || is_popular === '1' || is_popular === 'true') ? 1 : 0;
+  const isNewVal = (is_new === true || is_new === 1 || is_new === '1' || is_new === 'true') ? 1 : 0;
+  const imageVal = storedImage || image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=400&fit=crop';
+  
   const query = `INSERT INTO menu_items (name, description, price, original_price, image, category_id, is_popular, is_new, prep_time, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Tersedia')`;
-  db.query(query, [name, description, price, original_price || null, storedImage || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=400&fit=crop', category_id, is_popular ? 1 : 0, is_new ? 1 : 0, prep_time || '10 min'], (err, results) => {
-    if (err) return res.status(500).json(err);
-    res.status(201).json({ id: results.insertId, ...req.body, image: storedImage });
+  db.query(query, [name, description, price, original_price || null, imageVal, category_id, isPopularVal, isNewVal, prep_time || '10 min'], (err, results) => {
+    if (err) {
+      console.error('Error inserting menu:', err);
+      return res.status(500).json(err);
+    }
+    res.status(201).json({ id: results.insertId, ...req.body, image: imageVal });
   });
 });
 
 app.put('/api/menu/:id', requireAdmin, (req, res) => {
   const { id } = req.params;
-  const { name, description, price, original_price, image, category_id, status } = req.body;
+  const { name, description, price, original_price, image, category_id, is_popular, is_new, prep_time, status } = req.body;
   const storedImage = saveDataUrlImage(image, 'menu');
-  db.query(`UPDATE menu_items SET name=?, description=?, price=?, original_price=?, image=?, category_id=?, status=? WHERE id=?`,
-    [name, description, price, original_price, storedImage || image, category_id, status || 'Tersedia', id], (err) => {
-    if (err) return res.status(500).json(err);
-    res.json({ message: 'Menu updated' });
+  const isPopularVal = (is_popular === true || is_popular === 1 || is_popular === '1' || is_popular === 'true') ? 1 : 0;
+  const isNewVal = (is_new === true || is_new === 1 || is_new === '1' || is_new === 'true') ? 1 : 0;
+  const imageVal = storedImage || image || null;
+
+  db.query(`UPDATE menu_items SET name=?, description=?, price=?, original_price=?, image=?, category_id=?, is_popular=?, is_new=?, prep_time=?, status=? WHERE id=?`,
+    [name, description, price, original_price, imageVal, category_id, isPopularVal, isNewVal, prep_time || '10 min', status || 'Tersedia', id], (err, results) => {
+    if (err) {
+      console.error('Error updating menu:', err);
+      return res.status(500).json(err);
+    }
+    res.json({ message: 'Menu updated', affectedRows: results ? results.affectedRows : 0 });
   });
 });
 

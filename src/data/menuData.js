@@ -1,3 +1,5 @@
+import { apiUrl } from '../lib/api'
+
 export const categories = [
   { id: 'all', name: 'All Menu', icon: 'All' },
   { id: 'rice-bowl', name: 'Rice Bowls', icon: 'Bowl' },
@@ -8,6 +10,9 @@ export const categories = [
 
 export const optimizeImageUrl = (url, size = 360) => {
   if (!url || typeof url !== 'string') return url
+  if (url.startsWith('/uploads')) {
+    return apiUrl(url)
+  }
   if (!url.includes('images.unsplash.com')) return url
 
   try {
@@ -23,12 +28,7 @@ export const optimizeImageUrl = (url, size = 360) => {
   }
 }
 
-export const cleanMenuName = (name = '') =>
-  name
-    .replace(/\s*\(Pedas\)/gi, '')
-    .replace(/\s+Pedas(?=\s+Rice Bowl\b)/gi, '')
-    .replace(/\s+/g, ' ')
-    .trim()
+export const cleanMenuName = (name = '') => name
 
 export const menuItems = [
   // RICE BOWLS (Chicken & Meat toppings)
@@ -314,6 +314,7 @@ export const getMenuItems = async () => {
     return data.map(item => ({
       ...item,
       name: cleanMenuName(item.name),
+      image: optimizeImageUrl(item.image),
       originalPrice: item.original_price,
       prepTime: item.prep_time,
       category: item.category_id,

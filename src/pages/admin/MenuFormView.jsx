@@ -94,7 +94,13 @@ export default function MenuFormView({ editItem, onSaveSuccess, onCancel }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     })
-      .then(r => r.json())
+      .then(async r => {
+        if (!r.ok) {
+          const errData = await r.json().catch(() => ({}));
+          throw new Error(errData.message || 'Gagal menyimpan menu');
+        }
+        return r.json();
+      })
       .then(() => {
         setLoading(false)
         alert(editItem ? 'Menu berhasil diperbarui!' : 'Menu berhasil ditambahkan!')
@@ -103,7 +109,7 @@ export default function MenuFormView({ editItem, onSaveSuccess, onCancel }) {
       .catch(err => {
         console.error(err)
         setLoading(false)
-        alert('Gagal menyimpan menu.')
+        alert(err.message || 'Gagal menyimpan menu.')
       })
   }
 
