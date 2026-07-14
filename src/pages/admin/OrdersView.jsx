@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { formatPrice, optimizeImageUrl } from '../../data/menuData'
+import { apiUrl, apiFetch } from '../../lib/api'
 import { AlertCircle, Eye, X, CheckCircle, XCircle, ZoomIn, ZoomOut, ReceiptText } from 'lucide-react'
 
 const cs = {
@@ -60,7 +61,7 @@ export default function OrdersView({ filter, onOrdersChanged }) {
   const fetchOrders = () => {
     setLoading(true)
     setError('')
-    fetch('/api/orders')
+    apiFetch('/api/orders')
       .then(async r => {
         const data = await r.json().catch(() => null)
         if (!r.ok) {
@@ -85,7 +86,7 @@ export default function OrdersView({ filter, onOrdersChanged }) {
   }, [])
 
   const handleStatusChange = (id, newStatus) => {
-    fetch(`/api/orders/${id}`, {
+    apiFetch(`/api/orders/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: newStatus })
@@ -96,7 +97,7 @@ export default function OrdersView({ filter, onOrdersChanged }) {
   }
 
   const updatePaymentStatus = (paymentId, status, rejectionReason = '') => {
-    fetch(`/api/payments/${paymentId}`, {
+    apiFetch(`/api/payments/${paymentId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status, rejection_reason: rejectionReason })
@@ -235,7 +236,7 @@ export default function OrdersView({ filter, onOrdersChanged }) {
               </div>
             </div>
             <div style={cs.modalBody}>
-              <img src={selectedProof.proof_image} alt="Bukti transfer" style={{...cs.proofImg,width:`${proofZoom}%`}} />
+              <img src={apiUrl(selectedProof.proof_image)} alt="Bukti transfer" style={{...cs.proofImg,width:`${proofZoom}%`}} />
             </div>
             {selectedProof.payment_status === 'Pending' && selectedProof.payment_id && (
               <div style={{padding:16,borderTop:'1px solid #e2e8f0'}}>

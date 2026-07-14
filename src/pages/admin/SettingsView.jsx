@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Save, Globe, Clock, MapPin, CheckCircle } from 'lucide-react'
+import { apiFetch } from '../../lib/api'
 
 const cs = {
   h1: { fontSize:24, fontWeight:800, color:'#0f172a', marginBottom:4 },
@@ -21,7 +22,7 @@ export default function SettingsView() {
   const [showToast, setShowToast] = useState(false)
 
   useEffect(() => {
-    fetch('/api/settings').then(r=>r.json()).then(d => { setSettings(d); setLoading(false) }).catch(() => setLoading(false))
+    apiFetch('/api/settings').then(r=>r.json()).then(d => { setSettings(d); setLoading(false) }).catch(() => setLoading(false))
   }, [])
 
   const updateField = (key, value) => {
@@ -30,7 +31,7 @@ export default function SettingsView() {
 
   const handleSave = () => {
     setSaving(true)
-    fetch('/api/settings', {
+    apiFetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(settings)

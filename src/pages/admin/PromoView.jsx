@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Plus, Tag, Percent, Calendar, Trash2, X, CheckCircle } from 'lucide-react'
+import { apiFetch } from '../../lib/api'
 
 const cs = {
   card: { background:'#fff', border:'1px solid #e2e8f0', borderRadius:16, overflow:'hidden' },
@@ -36,7 +37,7 @@ export default function PromoView() {
 
   const fetchPromos = () => {
     setLoading(true)
-    fetch('/api/promos').then(r=>r.json()).then(d => { setPromos(d); setLoading(false) }).catch(() => setLoading(false))
+    apiFetch('/api/promos').then(r=>r.json()).then(d => { setPromos(d); setLoading(false) }).catch(() => setLoading(false))
   }
 
   useEffect(() => {
@@ -51,7 +52,7 @@ export default function PromoView() {
     e.preventDefault()
     if (!name) return
     setSaving(true)
-    fetch('/api/promos', {
+    apiFetch('/api/promos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -76,7 +77,7 @@ export default function PromoView() {
 
   const handleDelete = (id, name) => {
     if (window.confirm(`Hapus promo "${name}"?`)) {
-      fetch(`/api/promos/${id}`, { method: 'DELETE' })
+      apiFetch(`/api/promos/${id}`, { method: 'DELETE' })
         .then(() => fetchPromos())
         .catch(console.error)
     }

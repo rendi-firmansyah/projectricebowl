@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Upload, CheckCircle, X } from 'lucide-react'
+import { apiFetch } from '../../lib/api'
 
 const cs = {
   card: { background:'#fff', border:'1px solid #e2e8f0', borderRadius:16, overflow:'hidden' },
@@ -29,7 +30,7 @@ export default function MenuFormView({ editItem, onSaveSuccess, onCancel }) {
 
   // Fetch categories from DB
   useEffect(() => {
-    fetch('/api/categories')
+    apiFetch('/api/categories')
       .then(r => r.json())
       .then(data => {
         setCategories(data)
@@ -89,7 +90,7 @@ export default function MenuFormView({ editItem, onSaveSuccess, onCancel }) {
     
     const method = editItem ? 'PUT' : 'POST'
 
-    fetch(url, {
+    apiFetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)

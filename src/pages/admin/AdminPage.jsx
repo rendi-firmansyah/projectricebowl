@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { LayoutDashboard, Utensils, ShoppingBag, Users, Tag, CreditCard, Image as ImageIcon, MessageSquare, FileText, Settings, UserCircle, LogOut, ChevronDown, Menu, Bell, Search } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { formatPrice } from '../../data/menuData'
-import { absoluteApiUrl } from '../../lib/api'
+import { absoluteApiUrl, apiFetch } from '../../lib/api'
 import './admin.css'
 import DashboardView from './DashboardView'
 import MenuListView from './MenuListView'
@@ -60,14 +60,14 @@ export default function AdminPage() {
   const lastPendingCountRef = useRef(null)
 
   useEffect(() => {
-    fetch('/api/stats')
+    apiFetch('/api/stats')
       .then(r => r.json())
       .then(data => setStats(prev => ({ ...prev, totalMenu: data.totalMenu||0, totalOrders: data.totalOrders||0, totalCustomers: data.totalCustomers||0, revenueToday: data.totalRevenue||0, revenueMonth: data.totalRevenue||0 })))
       .catch(console.error)
   }, [])
 
   const refreshOrderCounts = () => {
-    fetch('/api/orders')
+    apiFetch('/api/orders')
       .then(r => r.json())
       .then(data => {
         const orders = Array.isArray(data) ? data : []

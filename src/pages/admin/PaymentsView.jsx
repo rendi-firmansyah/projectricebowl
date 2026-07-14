@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { formatPrice } from '../../data/menuData'
+import { apiUrl, apiFetch } from '../../lib/api'
 import { CreditCard, CheckCircle, XCircle, Clock, Eye, X, ZoomIn, ZoomOut } from 'lucide-react'
 
 const cs = {
@@ -43,7 +44,7 @@ export default function PaymentsView() {
 
   const fetchPayments = () => {
     setLoading(true)
-    fetch('/api/payments')
+    apiFetch('/api/payments')
       .then(r => r.json())
       .then(d => { setPayments(d); setLoading(false) })
       .catch(() => setLoading(false))
@@ -54,7 +55,7 @@ export default function PaymentsView() {
   }, [])
 
   const updateStatus = (id, status, rejectionReason = '') => {
-    fetch(`/api/payments/${id}`, {
+    apiFetch(`/api/payments/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status, rejection_reason: rejectionReason })
@@ -193,7 +194,7 @@ export default function PaymentsView() {
               </div>
             </div>
             <div style={cs.modalBody}>
-              <img src={selectedProof.proof_image} alt="Bukti transfer" style={{...cs.proofImg,width:`${proofZoom}%`}} />
+              <img src={apiUrl(selectedProof.proof_image)} alt="Bukti transfer" style={{...cs.proofImg,width:`${proofZoom}%`}} />
             </div>
             {selectedProof.status === 'Pending' && (
               <div style={{padding:16,borderTop:'1px solid #e2e8f0'}}>

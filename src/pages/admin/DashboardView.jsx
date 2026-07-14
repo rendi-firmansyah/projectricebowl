@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { DollarSign, TrendingUp, ShoppingCart, Users, Activity, BarChart3, PieChart, ArrowUpRight, Package, Clock, CheckCircle2 } from 'lucide-react'
 import { formatPrice, optimizeImageUrl } from '../../data/menuData'
+import { apiFetch } from '../../lib/api'
 
 const cs = {
   card: { background:'#fff', border:'1px solid #e2e8f0', borderRadius:16, padding:24, boxShadow:'0 1px 3px rgba(0,0,0,0.04)' },
@@ -19,17 +20,17 @@ export default function DashboardView({ stats }) {
   const [dashboard, setDashboard] = useState(null)
 
   useEffect(() => {
-    fetch('/api/orders')
+    apiFetch('/api/orders')
       .then(r => r.json())
       .then(d => setOrders(Array.isArray(d) ? d : []))
       .catch(() => setOrders([]))
 
-    fetch('/api/dashboard')
+    apiFetch('/api/dashboard')
       .then(r => r.json())
       .then(d => setDashboard(d))
       .catch(() => setDashboard(null))
 
-    fetch('/api/menu')
+    apiFetch('/api/menu')
       .then(r => r.json())
       .then(d => {
         if (Array.isArray(d)) {

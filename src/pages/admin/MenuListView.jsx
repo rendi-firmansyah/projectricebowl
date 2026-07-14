@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Search, Filter, Plus, Edit2, Trash2 } from 'lucide-react'
 import { formatPrice } from '../../data/menuData'
+import { apiFetch } from '../../lib/api'
 
 const cs = {
   card: { background:'#fff', border:'1px solid #e2e8f0', borderRadius:16, overflow:'hidden', boxShadow:'0 1px 3px rgba(0,0,0,0.04)' },
@@ -29,16 +30,16 @@ export default function MenuListView({ onAdd, onEdit }) {
 
   const fetchMenu = () => {
     setLoading(true)
-    fetch('/api/menu').then(r=>r.json()).then(data => { setMenuList(data); setLoading(false) }).catch(() => setLoading(false))
+    apiFetch('/api/menu').then(r=>r.json()).then(data => { setMenuList(data); setLoading(false) }).catch(() => setLoading(false))
   }
   const fetchCategories = () => {
-    fetch('/api/categories').then(r=>r.json()).then(data => setCategories(data)).catch(console.error)
+    apiFetch('/api/categories').then(r=>r.json()).then(data => setCategories(data)).catch(console.error)
   }
   useEffect(() => { fetchMenu(); fetchCategories(); }, [])
 
   const handleDelete = (id, name) => {
     if(window.confirm(`Hapus menu "${name}"?`)) {
-      fetch(`/api/menu/${id}`, {method:'DELETE'}).then(() => fetchMenu()).catch(console.error)
+      apiFetch(`/api/menu/${id}`, {method:'DELETE'}).then(() => fetchMenu()).catch(console.error)
     }
   }
 

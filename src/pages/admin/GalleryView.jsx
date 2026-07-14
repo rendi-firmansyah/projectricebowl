@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Plus, Image as ImageIcon, X, Trash2, CheckCircle } from 'lucide-react'
+import { apiFetch } from '../../lib/api'
 
 const cs = {
   h1: { fontSize:24, fontWeight:800, color:'#0f172a', marginBottom:4 },
@@ -25,7 +26,7 @@ export default function GalleryView() {
 
   const fetchGallery = () => {
     setLoading(true)
-    fetch('/api/gallery')
+    apiFetch('/api/gallery')
       .then(r=>r.json())
       .then(d => { setGallery(d); setLoading(false) })
       .catch(() => setLoading(false))
@@ -49,7 +50,7 @@ export default function GalleryView() {
     e.preventDefault()
     if (!imageUrl) return alert('Silakan pilih file gambar atau isi URL gambar')
     setUploading(true)
-    fetch('/api/gallery', {
+    apiFetch('/api/gallery', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title, type, image_url: imageUrl })
@@ -67,7 +68,7 @@ export default function GalleryView() {
 
   const handleDelete = (id) => {
     if (window.confirm('Hapus foto ini dari galeri?')) {
-      fetch(`/api/gallery/${id}`, { method: 'DELETE' })
+      apiFetch(`/api/gallery/${id}`, { method: 'DELETE' })
         .then(() => fetchGallery())
         .catch(console.error)
     }
