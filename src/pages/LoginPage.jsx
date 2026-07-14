@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Mail, Lock, User, LogIn, Sparkles, AlertCircle, Shield, ArrowLeft, Eye, EyeOff } from 'lucide-react'
+import { Mail, Lock, User, LogIn, Sparkles, AlertCircle, Shield, ArrowLeft, Eye, EyeOff, CheckCircle } from 'lucide-react'
 
 export default function LoginPage() {
   const { user, admin, login, register } = useAuth()
@@ -13,15 +13,19 @@ export default function LoginPage() {
   const finalRedirect = redirectParam.startsWith('/') ? redirectParam : '/' + redirectParam
 
   const [isSignUp, setIsSignUp] = useState(false)
+  const [isForgotPassword, setIsForgotPassword] = useState(false)
   
   // Form fields
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   
   // UI states
   const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -39,11 +43,47 @@ export default function LoginPage() {
   const handleSubmit = (e) => {
     e.preventDefault()
     setError('')
+    setSuccessMessage('')
     setLoading(true)
 
     // Delay slightly to feel premium & authentic
     setTimeout(async () => {
-      if (isSignUp) {
+      if (isForgotPassword) {
+        if (!email || !password || !confirmPassword) {
+          setError('Silakan isi semua field')
+          setLoading(false)
+          return
+        }
+        if (password.length < 6) {
+          setError('Password baru minimal 6 karakter')
+          setLoading(false)
+          return
+        }
+        if (password !== confirmPassword) {
+          setError('Password konfirmasi tidak cocok')
+          setLoading(false)
+          return
+        }
+        try {
+          const response = await fetch('/api/auth/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+          })
+          const data = await response.json().catch(() => null)
+          if (!response.ok) {
+            setError(data?.message || 'Gagal mereset password')
+          } else {
+            setSuccessMessage('Password berhasil diperbarui! Silakan masuk kembali.')
+            setEmail('')
+            setPassword('')
+            setConfirmPassword('')
+            setIsForgotPassword(false)
+          }
+        } catch {
+          setError('Tidak bisa menghubungi server')
+        }
+      } else if (isSignUp) {
         if (!name || !email || !password) {
           setError('Please fill in all fields')
           setLoading(false)
@@ -78,12 +118,13 @@ export default function LoginPage() {
     }, 800)
   }
 
-
   const handleAdminPreset = () => {
     setEmail('admin@couplebowl.com')
     setPassword('admin')
     setIsSignUp(false)
+    setIsForgotPassword(false)
     setError('')
+    setSuccessMessage('')
     if (!isAdminMode) {
       navigate('/login?mode=admin', { replace: true })
     }
@@ -107,28 +148,30 @@ export default function LoginPage() {
           <div className="login-logo-icon">CB</div>
           <h2 className="login-title">Couple Bowl</h2>
           <p className="login-subtitle">
-            {isAdminMode 
-              ? 'Sign in to access Admin Panel' 
-              : isSignUp 
-                ? 'Join us for delicious healthy bowls' 
-                : 'Sign in to order your favorite bowl'}
+            {isForgotPassword 
+              ? 'Reset kata sandi akun Anda' 
+              : isAdminMode 
+                ? 'Sign in to access Admin Panel' 
+                : isSignUp 
+                  ? 'Join us for delicious healthy bowls' 
+                  : 'Sign in to order your favorite bowl'}
           </p>
         </div>
 
         {/* Tab switchers - hide register for admin mode */}
-        {!isAdminMode && (
+        {!isAdminMode && !isForgotPassword && (
           <div className="login-tabs">
             <button 
               type="button" 
               className={`login-tab-btn ${!isSignUp ? 'active' : ''}`}
-              onClick={() => { setIsSignUp(false); setError(''); }}
+              onClick={() => { setIsSignUp(false); setError(''); setSuccessMessage(''); }}
             >
               Sign In
             </button>
             <button 
               type="button" 
               className={`login-tab-btn ${isSignUp ? 'active' : ''}`}
-              onClick={() => { setIsSignUp(true); setError(''); }}
+              onClick={() => { setIsSignUp(true); setError(''); setSuccessMessage(''); }}
             >
               Register
             </button>
@@ -144,7 +187,14 @@ export default function LoginPage() {
             </div>
           )}
 
-          {isSignUp && (
+          {successMessage && (
+            <div className="login-error-alert" style={{ background: '#ECFDF5', color: '#059669', borderColor: '#A7F3D0' }}>
+              <CheckCircle size={16} style={{ color: '#059669' }} />
+              <span>{successMessage}</span>
+            </div>
+          )}
+
+          {isSignUp && !isForgotPassword && (
             <div className="login-input-group">
               <label className="login-label">Full Name</label>
               <div className="login-input-wrapper">
@@ -177,7 +227,18 @@ export default function LoginPage() {
           </div>
 
           <div className="login-input-group">
-            <label className="login-label">Password</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label className="login-label">{isForgotPassword ? 'New Password' : 'Password'}</label>
+              {!isSignUp && !isForgotPassword && (
+                <button
+                  type="button"
+                  style={{ background: 'none', border: 'none', color: '#DC2626', fontSize: '12px', fontWeight: '600', cursor: 'pointer', padding: 0 }}
+                  onClick={() => { setIsForgotPassword(true); setError(''); setSuccessMessage(''); }}
+                >
+                  Forgot Password?
+                </button>
+              )}
+            </div>
             <div className="login-input-wrapper">
               <Lock size={18} className="login-input-icon" />
               <input 
@@ -201,35 +262,76 @@ export default function LoginPage() {
             </div>
           </div>
 
+          {isForgotPassword && (
+            <div className="login-input-group">
+              <label className="login-label">Confirm New Password</label>
+              <div className="login-input-wrapper">
+                <Lock size={18} className="login-input-icon" />
+                <input 
+                  type={showConfirmPassword ? 'text' : 'password'} 
+                  className="input-field login-input login-password-input" 
+                  placeholder="********"
+                  value={confirmPassword} 
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  className="login-password-toggle"
+                  onClick={() => setShowConfirmPassword(value => !value)}
+                  disabled={loading}
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  title={showConfirmPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+          )}
+
           <button type="submit" className="btn-primary login-submit-btn" disabled={loading}>
             {loading ? (
               <span className="login-loading-spinner" />
             ) : (
               <>
                 <LogIn size={18} />
-                <span>{isSignUp ? 'Create Account' : isAdminMode ? 'Sign In as Admin' : 'Sign In'}</span>
+                <span>{isForgotPassword ? 'Reset Password' : isSignUp ? 'Create Account' : isAdminMode ? 'Sign In as Admin' : 'Sign In'}</span>
               </>
             )}
           </button>
         </form>
 
-        {/* Divider */}
-        <div className="login-divider">
-          <span className="login-divider-text">OR</span>
-        </div>
+        {isForgotPassword ? (
+          <div style={{ textAlign: 'center', marginTop: '20px' }}>
+            <button
+              type="button"
+              style={{ background: 'none', border: 'none', color: '#4B5563', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
+              onClick={() => { setIsForgotPassword(false); setError(''); setSuccessMessage(''); }}
+            >
+              Back to Sign In
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Divider */}
+            <div className="login-divider">
+              <span className="login-divider-text">OR</span>
+            </div>
 
-        {/* Shortcuts for testing / admin */}
-        <div className="login-shortcuts">
-          <button 
-            type="button" 
-            className="login-shortcut-btn admin-preset"
-            onClick={handleAdminPreset}
-            disabled={loading}
-          >
-            <Shield size={14} />
-            <span>Use Admin Credentials</span>
-          </button>
-        </div>
+            {/* Shortcuts for testing / admin */}
+            <div className="login-shortcuts">
+              <button 
+                type="button" 
+                className="login-shortcut-btn admin-preset"
+                onClick={handleAdminPreset}
+                disabled={loading}
+              >
+                <Shield size={14} />
+                <span>Use Admin Credentials</span>
+              </button>
+            </div>
+          </>
+        )}
 
         <div className="login-footer-note">
           <Sparkles size={14} style={{ color: '#F59E0B' }} />

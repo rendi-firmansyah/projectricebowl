@@ -548,6 +548,28 @@ app.post('/api/auth/register', (req, res) => {
   );
 });
 
+app.post('/api/auth/forgot-password', (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ message: 'Email and new password are required' });
+  if (String(password).length < 6) return res.status(400).json({ message: 'Password minimal 6 karakter' });
+
+  db.query('SELECT * FROM auth_users WHERE email = ?', [email], (err, rows) => {
+    if (err) return res.status(500).json(err);
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Email tidak ditemukan' });
+    }
+
+    db.query(
+      'UPDATE auth_users SET password_hash = ? WHERE email = ?',
+      [hashPassword(password), email],
+      (updateErr) => {
+        if (updateErr) return res.status(500).json(updateErr);
+        res.json({ success: true, message: 'Password berhasil diperbarui!' });
+      }
+    );
+  });
+});
+
 app.get('/api/auth/session', requireAuth, (req, res) => {
   res.json({ user: req.authUser });
 });
