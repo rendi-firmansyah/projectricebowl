@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { formatPrice } from '../../data/menuData'
-import { apiUrl, apiFetch } from '../../lib/api'
+import { apiUrl } from '../../lib/api'
 import { CreditCard, CheckCircle, XCircle, Clock, Eye, X, ZoomIn, ZoomOut } from 'lucide-react'
 
 const cs = {
@@ -44,7 +44,7 @@ export default function PaymentsView() {
 
   const fetchPayments = () => {
     setLoading(true)
-    apiFetch('/api/payments')
+    fetch('/api/payments')
       .then(r => r.json())
       .then(d => { setPayments(d); setLoading(false) })
       .catch(() => setLoading(false))
@@ -55,7 +55,7 @@ export default function PaymentsView() {
   }, [])
 
   const updateStatus = (id, status, rejectionReason = '') => {
-    apiFetch(`/api/payments/${id}`, {
+    fetch(`/api/payments/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status, rejection_reason: rejectionReason })

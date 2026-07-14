@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { formatPrice } from '../../data/menuData'
-import { apiFetch } from '../../lib/api'
 import { Search, Mail, Phone } from 'lucide-react'
 
 const cs = {
@@ -18,7 +17,7 @@ export default function CustomersView() {
   const [search, setSearch] = useState('')
 
   useEffect(() => {
-    apiFetch('/api/customers').then(r=>r.json()).then(d => { setCustomers(d); setLoading(false) }).catch(() => setLoading(false))
+    fetch('/api/customers').then(r=>r.json()).then(d => { setCustomers(d); setLoading(false) }).catch(() => setLoading(false))
   }, [])
 
   const filtered = customers.filter(c => c.name?.toLowerCase().includes(search.toLowerCase()) || c.email?.toLowerCase().includes(search.toLowerCase()))

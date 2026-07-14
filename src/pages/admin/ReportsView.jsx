@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { BarChart3, TrendingUp, Crown, Calendar, DollarSign, ShoppingCart, ArrowUpRight, ArrowDownRight } from 'lucide-react'
 import { formatPrice } from '../../data/menuData'
-import { apiFetch } from '../../lib/api'
 
 const cs = {
   card: { background:'#fff', border:'1px solid #e2e8f0', borderRadius:16, padding:24, boxShadow:'0 1px 3px rgba(0,0,0,0.04)' },
@@ -31,7 +30,7 @@ function SalesReport() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    apiFetch('/api/orders')
+    fetch('/api/orders')
       .then(r => r.json())
       .then(d => { setOrders(Array.isArray(d) ? d : []); setLoading(false) })
       .catch(() => setLoading(false))
@@ -130,7 +129,7 @@ function RevenueReport() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    apiFetch('/api/orders')
+    fetch('/api/orders')
       .then(r => r.json())
       .then(d => { setOrders(Array.isArray(d) ? d : []); setLoading(false) })
       .catch(() => setLoading(false))
@@ -249,7 +248,7 @@ function TopMenuReport() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    apiFetch('/api/menu')
+    fetch('/api/menu')
       .then(r => r.json())
       .then(d => { setMenuItems(Array.isArray(d) ? d : []); setLoading(false) })
       .catch(() => setLoading(false))

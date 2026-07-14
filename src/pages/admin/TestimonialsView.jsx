@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { Star, MessageSquare, Plus, Trash2, X, CheckCircle } from 'lucide-react'
-import { apiFetch } from '../../lib/api'
 
 const cs = {
   h1: { fontSize:24, fontWeight:800, color:'#0f172a', marginBottom:4 },
@@ -41,7 +40,7 @@ export default function TestimonialsView() {
 
   const fetchTestimonials = () => {
     setLoading(true)
-    apiFetch('/api/testimonials')
+    fetch('/api/testimonials')
       .then(r => r.json())
       .then(d => { setTestimonials(d); setLoading(false) })
       .catch(() => setLoading(false))
@@ -61,7 +60,7 @@ export default function TestimonialsView() {
     e.preventDefault()
     if (!customerName || !comment) return
     setSaving(true)
-    apiFetch('/api/testimonials', {
+    fetch('/api/testimonials', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ customer_name: customerName, rating, comment })
@@ -79,7 +78,7 @@ export default function TestimonialsView() {
 
   const handleDelete = (id) => {
     if (window.confirm('Hapus testimoni ini?')) {
-      apiFetch(`/api/testimonials/${id}`, { method: 'DELETE' })
+      fetch(`/api/testimonials/${id}`, { method: 'DELETE' })
         .then(() => {
           fetchTestimonials()
           showSuccessToast('Testimoni berhasil dihapus')

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { Plus, Trash2, Tag, Edit2, X, CheckCircle, Save } from 'lucide-react'
-import { apiFetch } from '../../lib/api'
 
 const cs = {
   card: { background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, overflow: 'hidden' },
@@ -34,7 +33,7 @@ export default function MenuCategoryView() {
 
   const fetchCategories = () => {
     setLoading(true)
-    apiFetch('/api/categories')
+    fetch('/api/categories')
       .then(r => r.json())
       .then(d => { setCategories(d); setLoading(false); })
       .catch(() => setLoading(false))
@@ -47,7 +46,7 @@ export default function MenuCategoryView() {
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!newId || !newName) return
-    apiFetch('/api/categories', {
+    fetch('/api/categories', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: newId.toLowerCase().replace(/\s+/g, '-'), name: newName, icon: 'Utensils' })
@@ -64,7 +63,7 @@ export default function MenuCategoryView() {
 
   const handleDelete = (id, name) => {
     if (window.confirm(`Hapus kategori "${name}"?\n\nMenu yang terhubung ke kategori ini akan kehilangan referensi kategorinya.`)) {
-      apiFetch(`/api/categories/${id}`, { method: 'DELETE' })
+      fetch(`/api/categories/${id}`, { method: 'DELETE' })
         .then(() => {
           fetchCategories()
           showSuccessToast(`Kategori "${name}" berhasil dihapus`)
@@ -87,7 +86,7 @@ export default function MenuCategoryView() {
 
   const saveEdit = (id) => {
     if (!editName.trim()) return
-    apiFetch(`/api/categories/${id}`, {
+    fetch(`/api/categories/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: editName, icon: editIcon || 'Utensils' })
