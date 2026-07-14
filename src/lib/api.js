@@ -13,4 +13,21 @@ export const apiUrl = (path) => {
 
 export const absoluteApiUrl = (path) => new URL(apiUrl(path), window.location.origin)
 
-export const apiFetch = (path, options) => fetch(apiUrl(path), options)
+export const apiFetch = (path, options = {}) => {
+  const { method, headers, body, ...rest } = options
+
+  const fetchOptions = {
+    ...rest,
+    method: method || 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...headers
+    }
+  }
+
+  if (body !== undefined) {
+    fetchOptions.body = body
+  }
+
+  return fetch(apiUrl(path), fetchOptions)
+}
