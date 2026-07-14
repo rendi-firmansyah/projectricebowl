@@ -64,12 +64,12 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const register = async (name, email, password) => {
+  const register = async (name, email, password, phone) => {
     try {
-      const response = await apiFetch('/api/auth/register', {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password })
+        body: JSON.stringify({ name, email, password, phone })
       })
       const data = await response.json().catch(() => null)
 
@@ -83,6 +83,28 @@ export function AuthProvider({ children }) {
       return { success: true, role: 'user' }
     } catch {
       return { success: false, message: 'Tidak bisa terhubung ke server auth' }
+    }
+  }
+
+  const updateProfile = async (name, phone, address) => {
+    try {
+      const response = await fetch('/api/auth/update-profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone, address })
+      })
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        return { success: false, message: data?.message || 'Gagal memperbarui profil' }
+      }
+
+      const sessionData = { ...data.user, token: data.token }
+      saveSession(USER_SESSION_KEY, sessionData)
+      setUserSession(sessionData)
+      return { success: true, user: data.user }
+    } catch {
+      return { success: false, message: 'Tidak bisa terhubung ke server' }
     }
   }
 
@@ -105,6 +127,7 @@ export function AuthProvider({ children }) {
       login,
       register,
       logout,
+      updateProfile,
       loading
     }}>
       {!loading && children}

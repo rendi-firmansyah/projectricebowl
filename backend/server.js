@@ -158,6 +158,8 @@ const createToken = (user) => {
     name: user.name,
     email: user.email,
     role: user.role,
+    phone: user.phone || null,
+    address: user.address || null,
     exp: Date.now() + TOKEN_MAX_AGE_MS
   };
   const body = base64Url(JSON.stringify(payload));
@@ -458,6 +460,8 @@ const ensureAuthUsers = () => {
       email VARCHAR(150) UNIQUE NOT NULL,
       password_hash VARCHAR(255) NOT NULL,
       role ENUM('user', 'admin') NOT NULL DEFAULT 'user',
+      phone VARCHAR(50) NULL,
+      address TEXT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `;
@@ -494,6 +498,8 @@ const bootstrapDatabase = async () => {
     await seedInitialMenu();
     ensureColumn('order_items', 'item_note', 'TEXT NULL');
     ensureColumn('payments', 'rejection_reason', 'TEXT NULL');
+    ensureColumn('auth_users', 'phone', 'VARCHAR(50) NULL');
+    ensureColumn('auth_users', 'address', 'TEXT NULL');
     normalizeMenuNames();
     ensureAuthUsers();
     console.log('Database bootstrap completed');
@@ -523,26 +529,26 @@ app.post('/api/auth/login', (req, res) => {
       });
     }
 
-    const sessionUser = { id: user.id, name: user.name, email: user.email, role: user.role };
+    const sessionUser = { id: user.id, name: user.name, email: user.email, role: user.role, phone: user.phone || null, address: user.address || null };
     res.json({ user: sessionUser, token: createToken(sessionUser) });
   });
 });
 
 app.post('/api/auth/register', (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, phone } = req.body;
   if (!name || !email || !password) return res.status(400).json({ message: 'Name, email, and password are required' });
   if (String(password).length < 6) return res.status(400).json({ message: 'Password minimal 6 karakter' });
 
   db.query(
-    'INSERT INTO auth_users (name, email, password_hash, role) VALUES (?, ?, ?, ?)',
-    [name, email, hashPassword(password), 'user'],
+    'INSERT INTO auth_users (name, email, password_hash, role, phone, address) VALUES (?, ?, ?, ?, ?, ?)',
+    [name, email, hashPassword(password), 'user', phone || null, null],
     (err, result) => {
       if (err) {
         if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ message: 'Email sudah terdaftar' });
         return res.status(500).json(err);
       }
 
-      const sessionUser = { id: result.insertId, name, email, role: 'user' };
+      const sessionUser = { id: result.insertId, name, email, role: 'user', phone: phone || null, address: null };
       res.status(201).json({ user: sessionUser, token: createToken(sessionUser) });
     }
   );
@@ -571,7 +577,34 @@ app.post('/api/auth/forgot-password', (req, res) => {
 });
 
 app.get('/api/auth/session', requireAuth, (req, res) => {
-  res.json({ user: req.authUser });
+  db.query('SELECT id, name, email, role, phone, address FROM auth_users WHERE id = ?', [req.authUser.id], (err, rows) => {
+    if (err || rows.length === 0) return res.status(401).json({ message: 'User not found' });
+    res.json({ user: rows[0] });
+  });
+});
+
+app.put('/api/auth/update-profile', requireAuth, (req, res) => {
+  const { name, phone, address } = req.body;
+  const userId = req.authUser.id;
+
+  db.query(
+    'UPDATE auth_users SET name = ?, phone = ?, address = ? WHERE id = ?',
+    [name || req.authUser.name, phone || null, address || null, userId],
+    (err) => {
+      if (err) return res.status(500).json(err);
+      
+      db.query('SELECT id, name, email, role, phone, address FROM auth_users WHERE id = ?', [userId], (selectErr, rows) => {
+        if (selectErr || rows.length === 0) return res.status(500).json({ message: 'Error fetching updated user' });
+        
+        const updatedUser = rows[0];
+        res.json({
+          success: true,
+          user: updatedUser,
+          token: createToken(updatedUser)
+        });
+      });
+    }
+  );
 });
 
 app.get('/api/events/admin', (req, res) => {

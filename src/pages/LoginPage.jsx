@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Mail, Lock, User, LogIn, Sparkles, AlertCircle, Shield, ArrowLeft, Eye, EyeOff, CheckCircle } from 'lucide-react'
+import { Mail, Lock, User, LogIn, Sparkles, AlertCircle, Shield, ArrowLeft, Eye, EyeOff, CheckCircle, Phone } from 'lucide-react'
 
 export default function LoginPage() {
   const { user, admin, login, register } = useAuth()
@@ -20,6 +20,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [phone, setPhone] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   
@@ -84,12 +85,12 @@ export default function LoginPage() {
           setError('Tidak bisa menghubungi server')
         }
       } else if (isSignUp) {
-        if (!name || !email || !password) {
-          setError('Please fill in all fields')
+        if (!name || !email || !password || !phone) {
+          setError('Silakan isi semua kolom pendaftaran')
           setLoading(false)
           return
         }
-        const res = await register(name, email, password)
+        const res = await register(name, email, password, phone)
         if (!res.success) {
           setError(res.message)
         } else {
@@ -195,20 +196,37 @@ export default function LoginPage() {
           )}
 
           {isSignUp && !isForgotPassword && (
-            <div className="login-input-group">
-              <label className="login-label">Full Name</label>
-              <div className="login-input-wrapper">
-                <User size={18} className="login-input-icon" />
-                <input 
-                  type="text" 
-                  className="input-field login-input" 
-                  placeholder="Enter your full name"
-                  value={name} 
-                  onChange={e => setName(e.target.value)}
-                  disabled={loading}
-                />
+            <>
+              <div className="login-input-group">
+                <label className="login-label">Full Name</label>
+                <div className="login-input-wrapper">
+                  <User size={18} className="login-input-icon" />
+                  <input 
+                    type="text" 
+                    className="input-field login-input" 
+                    placeholder="Enter your full name"
+                    value={name} 
+                    onChange={e => setName(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
               </div>
-            </div>
+
+              <div className="login-input-group">
+                <label className="login-label">Phone Number</label>
+                <div className="login-input-wrapper">
+                  <Phone size={18} className="login-input-icon" />
+                  <input 
+                    type="tel" 
+                    className="input-field login-input" 
+                    placeholder="e.g. 08123456789"
+                    value={phone} 
+                    onChange={e => setPhone(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+            </>
           )}
 
           <div className="login-input-group">

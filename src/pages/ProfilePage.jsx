@@ -28,13 +28,26 @@ const statusColors = {
 const statusSteps = ['Menunggu Pembayaran', 'Diproses', 'Sedang Dimasak', 'Siap Diambil', 'Selesai']
 
 export default function ProfilePage() {
-  const { user, logout } = useAuth()
+  const { user, logout, updateProfile } = useAuth()
   const [orders, setOrders] = useState([])
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [activePanel, setActivePanel] = useState('menu')
   const [favoriteIds, setFavoriteIds] = useState([])
   const [menuList, setMenuList] = useState([])
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
+
+  const [address, setAddress] = useState('')
+  const [phone, setPhone] = useState('')
+  const [profileLoading, setProfileLoading] = useState(false)
+  const [profileSuccess, setProfileSuccess] = useState('')
+  const [profileError, setProfileError] = useState('')
+
+  useEffect(() => {
+    if (user) {
+      setAddress(user.address || '')
+      setPhone(user.phone || '')
+    }
+  }, [user])
 
   useEffect(() => {
     if (!user?.email) return
@@ -187,12 +200,80 @@ export default function ProfilePage() {
     </>
   )
 
+  const handleSaveProfile = async (e) => {
+    e.preventDefault()
+    setProfileLoading(true)
+    setProfileSuccess('')
+    setProfileError('')
+
+    const res = await updateProfile(user?.name, phone, address)
+    if (res.success) {
+      setProfileSuccess('Profil dan alamat berhasil diperbarui!')
+    } else {
+      setProfileError(res.message || 'Gagal memperbarui profil')
+    }
+    setProfileLoading(false)
+  }
+
   const renderActivePanel = () => {
     if (activePanel === 'favorites') return renderFavoritesPanel()
     if (activePanel === 'addresses') {
-      return renderInfoPanel('Addresses', 'Alamat pengiriman akan digunakan saat checkout. Saat ini alamat dapat diisi langsung di halaman checkout.', (
-        <Link to="/checkout" className="btn-primary" style={{ padding: '8px 18px', fontSize: 13, textDecoration: 'none' }}>Buka Checkout</Link>
-      ))
+      return (
+        <>
+          <h3 className="profile-orders-title">Alamat & Kontak</h3>
+          <div className="profile-panel-card">
+            <p style={{ color: '#6B7280', fontSize: 13, marginBottom: 16 }}>
+              Kelola nomor telepon dan alamat pengiriman Anda di sini agar terisi otomatis saat checkout.
+            </p>
+
+            <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {profileSuccess && (
+                <div style={{ padding: '10px 14px', background: '#ECFDF5', color: '#059669', borderRadius: 12, fontSize: 12, border: '1px solid #A7F3D0' }}>
+                  <span>{profileSuccess}</span>
+                </div>
+              )}
+              {profileError && (
+                <div style={{ padding: '10px 14px', background: '#FEF2F2', color: '#DC2626', borderRadius: 12, fontSize: 12, border: '1px solid #FEE2E2' }}>
+                  <span>{profileError}</span>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#4B5563', textTransform: 'uppercase' }}>Nomor Telepon</label>
+                <input 
+                  type="tel" 
+                  value={phone} 
+                  onChange={e => setPhone(e.target.value)} 
+                  placeholder="Contoh: 08123456789" 
+                  disabled={profileLoading}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #E5E7EB', borderRadius: 10, fontSize: 13 }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#4B5563', textTransform: 'uppercase' }}>Alamat Pengiriman</label>
+                <textarea 
+                  value={address} 
+                  onChange={e => setAddress(e.target.value)} 
+                  placeholder="Masukkan alamat lengkap pengiriman Anda" 
+                  disabled={profileLoading}
+                  rows={3}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #E5E7EB', borderRadius: 10, fontSize: 13, resize: 'vertical', fontFamily: 'inherit' }}
+                />
+              </div>
+
+              <button 
+                type="submit" 
+                className="btn-primary" 
+                disabled={profileLoading} 
+                style={{ padding: '10px 18px', fontSize: 13, width: 'fit-content', marginTop: 6 }}
+              >
+                {profileLoading ? 'Menyimpan...' : 'Simpan Perubahan'}
+              </button>
+            </form>
+          </div>
+        </>
+      )
     }
     if (activePanel === 'payment') {
       return renderInfoPanel('Payment', 'Metode pembayaran aktif: transfer bank, GoPay, dan bayar di tempat sesuai pilihan checkout.', (
@@ -211,6 +292,8 @@ export default function ProfilePage() {
         <div style={{ display: 'grid', gap: 10, fontSize: 13 }}>
           <div><strong>Nama:</strong> {user?.name || '-'}</div>
           <div><strong>Email:</strong> {user?.email || '-'}</div>
+          <div><strong>No. Telp:</strong> {user?.phone || '-'}</div>
+          <div><strong>Alamat:</strong> {user?.address || '-'}</div>
         </div>
       ))
     }

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { ChevronLeft, MapPin, CreditCard, ArrowRight, Upload, X } from 'lucide-react'
 import { useCart } from '../context/CartContext'
@@ -28,14 +28,24 @@ export default function CheckoutPage() {
   const { user } = useAuth()
   
   const [selectedPayment, setSelectedPayment] = useState('transfer')
-  const defaultAddress = 'Jl. Sudirman No. 123, Jakarta Pusat'
-  const addressRef = useRef(null)
   const orderNoteRef = useRef(null)
   const itemNoteRefs = useRef({})
   
   const [copied, setCopied] = useState(false)
   const [proofImage, setProofImage] = useState(null)
   const [loading, setLoading] = useState(false)
+
+  const [customerName, setCustomerName] = useState('')
+  const [customerPhone, setCustomerPhone] = useState('')
+  const [customerAddress, setCustomerAddress] = useState('')
+
+  useEffect(() => {
+    if (user) {
+      setCustomerName(user.name || '')
+      setCustomerPhone(user.phone || '')
+      setCustomerAddress(user.address || '')
+    }
+  }, [user])
 
   const toggleTopping = (item, topping) => {
     const currentToppings = item.customization?.toppings || []
@@ -63,6 +73,11 @@ export default function CheckoutPage() {
   }
 
   const handleOrder = async () => {
+    if (!customerName || !customerPhone || !customerAddress) {
+      alert('Harap lengkapi Nama Penerima, Nomor Telepon, dan Alamat Pengiriman.')
+      return
+    }
+
     if (['transfer', 'gopay'].includes(selectedPayment) && !proofImage) {
       alert('Harap upload bukti transfer terlebih dahulu.')
       return
@@ -72,10 +87,10 @@ export default function CheckoutPage() {
 
     try {
       const orderData = {
-        customer_name: user?.name || 'Guest',
+        customer_name: customerName,
         customer_email: user?.email || '',
-        customer_phone: '',
-        address: addressRef.current?.value || defaultAddress,
+        customer_phone: customerPhone,
+        address: customerAddress,
         note: orderNoteRef.current?.value || '',
         payment_method: selectedPayment,
         total: total,
@@ -141,20 +156,50 @@ export default function CheckoutPage() {
       <div className="checkout-layout">
         {/* Left Column */}
         <div className="checkout-forms-col">
-          {/* Delivery Address */}
+          {/* Shipping & Contact Info */}
           <div className="checkout-card">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
               <MapPin size={18} color="#DC2626" />
-              <span style={{ fontSize: 15, fontWeight: 700 }}>Delivery Address</span>
+              <span style={{ fontSize: 15, fontWeight: 700 }}>Shipping & Contact Info</span>
             </div>
-            <input
-              ref={addressRef}
-              className="input-field"
-              defaultValue={defaultAddress}
-              placeholder="Enter your address"
-              autoComplete="street-address"
-              style={{ fontSize: 16 }}
-            />
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: '#4B5563' }}>Nama Penerima</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={customerName}
+                  onChange={e => setCustomerName(e.target.value)}
+                  placeholder="Masukkan nama penerima"
+                  style={{ fontSize: 15 }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: '#4B5563' }}>Nomor Telepon</label>
+                <input
+                  type="tel"
+                  className="input-field"
+                  value={customerPhone}
+                  onChange={e => setCustomerPhone(e.target.value)}
+                  placeholder="Masukkan nomor telepon aktif"
+                  style={{ fontSize: 15 }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: '#4B5563' }}>Alamat Pengiriman</label>
+                <textarea
+                  className="input-field"
+                  value={customerAddress}
+                  onChange={e => setCustomerAddress(e.target.value)}
+                  placeholder="Masukkan alamat pengiriman lengkap"
+                  rows={2}
+                  style={{ fontSize: 15, resize: 'vertical', fontFamily: 'inherit' }}
+                />
+              </div>
+            </div>
           </div>
 
           {/* Order Items */}
