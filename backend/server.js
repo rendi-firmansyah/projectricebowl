@@ -364,7 +364,7 @@ const ensureCoreTables = async () => {
     )
   `);
 
-  // Self-healing check: ensure rating and reviews columns exist on menu_items
+  // Self-healing check: ensure frequently used menu columns exist
   try {
     await queryAsync('ALTER TABLE menu_items ADD COLUMN rating DECIMAL(3,2) DEFAULT 4.50');
     console.log('Added rating column to menu_items');
@@ -375,6 +375,13 @@ const ensureCoreTables = async () => {
   try {
     await queryAsync('ALTER TABLE menu_items ADD COLUMN reviews INT DEFAULT 0');
     console.log('Added reviews column to menu_items');
+  } catch (err) {
+    // Column already exists or table is not ready
+  }
+
+  try {
+    await queryAsync("ALTER TABLE menu_items ADD COLUMN status VARCHAR(50) DEFAULT 'Tersedia'");
+    console.log('Added status column to menu_items');
   } catch (err) {
     // Column already exists or table is not ready
   }
@@ -690,19 +697,20 @@ app.get('/api/menu', (req, res) => {
 });
 
 app.post('/api/menu', requireAdmin, (req, res) => {
-  const { name, description, price, original_price, image, category_id, is_popular, is_new, prep_time } = req.body;
+  const { name, description, price, original_price, image, category_id, is_popular, is_new, prep_time, status } = req.body;
   const storedImage = saveDataUrlImage(image, 'menu');
   const isPopularVal = (is_popular === true || is_popular === 1 || is_popular === '1' || is_popular === 'true') ? 1 : 0;
   const isNewVal = (is_new === true || is_new === 1 || is_new === '1' || is_new === 'true') ? 1 : 0;
   const imageVal = storedImage || image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=400&fit=crop';
+  const statusVal = status || 'Tersedia';
   
-  const query = `INSERT INTO menu_items (name, description, price, original_price, image, category_id, is_popular, is_new, prep_time, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Tersedia')`;
-  db.query(query, [name, description, price, original_price || null, imageVal, category_id, isPopularVal, isNewVal, prep_time || '10 min'], (err, results) => {
+  const query = `INSERT INTO menu_items (name, description, price, original_price, image, category_id, is_popular, is_new, prep_time, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  db.query(query, [name, description, price, original_price || null, imageVal, category_id, isPopularVal, isNewVal, prep_time || '10 min', statusVal], (err, results) => {
     if (err) {
       console.error('Error inserting menu:', err);
       return res.status(500).json(err);
     }
-    res.status(201).json({ id: results.insertId, ...req.body, image: imageVal });
+    res.status(201).json({ id: results.insertId, ...req.body, image: imageVal, status: statusVal });
   });
 });
 
@@ -880,7 +888,13 @@ app.post('/api/orders', requireUserOrAdmin, (req, res) => {
     });
   };
 
-  db.getConnection((err, connection) => {
+  const orderItemIds = [...new Set(items.map(item => Number(item.id)).filter(Boolean))];
+  if (orderItemIds.length === 0 || items.some(item => !Number(item.id))) {
+    return res.status(400).json({ message: 'Order contains invalid menu items' });
+  }
+
+  const createOrder = () => {
+    db.getConnection((err, connection) => {
     if (err) return res.status(500).json(err);
 
     connection.beginTransaction((err) => {
@@ -954,6 +968,25 @@ app.post('/api/orders', requireUserOrAdmin, (req, res) => {
         });
       });
     });
+    });
+  };
+
+  db.query('SELECT id, name, status FROM menu_items WHERE id IN (?)', [orderItemIds], (menuErr, menuRows) => {
+    if (menuErr) return res.status(500).json(menuErr);
+
+    const foundIds = new Set(menuRows.map(item => Number(item.id)));
+    const missingItems = items.filter(item => !foundIds.has(Number(item.id)));
+    if (missingItems.length > 0) {
+      return res.status(400).json({ message: 'Beberapa menu tidak ditemukan atau sudah tidak tersedia' });
+    }
+
+    const unavailableItems = menuRows.filter(item => String(item.status || 'Tersedia').toLowerCase() !== 'tersedia');
+    if (unavailableItems.length > 0) {
+      const names = unavailableItems.map(item => item.name).join(', ');
+      return res.status(409).json({ message: `Menu ${names} sedang habis dan tidak bisa dipesan` });
+    }
+
+    createOrder();
   });
 });
 
@@ -964,6 +997,22 @@ app.put('/api/orders/:id', requireAdmin, (req, res) => {
     if (err) return res.status(500).json(err);
     sendAdminEvent('order-status-updated', { id, status });
     res.json({ message: 'Order status updated' });
+  });
+});
+
+app.delete('/api/orders/:id', requireAdmin, (req, res) => {
+  const { id } = req.params;
+
+  db.query('SELECT id, order_number FROM orders WHERE id = ? LIMIT 1', [id], (findErr, rows) => {
+    if (findErr) return res.status(500).json(findErr);
+    if (rows.length === 0) return res.status(404).json({ message: 'Order not found' });
+
+    db.query('DELETE FROM orders WHERE id = ?', [id], (deleteErr) => {
+      if (deleteErr) return res.status(500).json(deleteErr);
+
+      sendAdminEvent('order-deleted', { id: Number(id), order_number: rows[0].order_number });
+      res.json({ message: 'Order deleted' });
+    });
   });
 });
 

@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import { formatPrice, optimizeImageUrl } from '../../data/menuData'
 import { apiUrl } from '../../lib/api'
-import { AlertCircle, Eye, X, CheckCircle, XCircle, ZoomIn, ZoomOut, ReceiptText } from 'lucide-react'
+import { AlertCircle, Eye, X, CheckCircle, XCircle, ZoomIn, ZoomOut, ReceiptText, Trash2 } from 'lucide-react'
 
 const cs = {
   card: { background:'#fff', border:'1px solid #e2e8f0', borderRadius:16, overflow:'hidden' },
   h1: { fontSize:24, fontWeight:800, color:'#0f172a', marginBottom:4 },
   sub: { fontSize:14, color:'#64748b', marginBottom:24 },
-  table: { width:'100%', minWidth:980, borderCollapse:'collapse', textAlign:'left' },
+  table: { width:'100%', minWidth:1080, borderCollapse:'collapse', textAlign:'left' },
   th: { padding:'14px 24px', background:'#f8fafc', color:'#64748b', fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.5px', borderBottom:'1px solid #e2e8f0' },
   td: { padding:'14px 24px', borderBottom:'1px solid #f1f5f9', fontSize:14, verticalAlign:'middle' },
   badge: (bg,color) => ({ display:'inline-flex', padding:'4px 10px', borderRadius:9999, fontSize:12, fontWeight:700, background:bg, color }),
@@ -96,6 +96,21 @@ export default function OrdersView({ filter, onOrdersChanged }) {
       .catch(console.error)
   }
 
+  const handleDeleteOrder = (order) => {
+    if (!window.confirm(`Hapus riwayat pesanan #${order.order_number}? Data pesanan, item, dan pembayaran terkait akan ikut dihapus.`)) {
+      return
+    }
+
+    fetch(`/api/orders/${order.id}`, { method: 'DELETE' })
+      .then(async r => {
+        const data = await r.json().catch(() => null)
+        if (!r.ok) throw new Error(data?.message || 'Gagal menghapus pesanan')
+        return data
+      })
+      .then(() => fetchOrders())
+      .catch(err => setError(err.message))
+  }
+
   const updatePaymentStatus = (paymentId, status, rejectionReason = '') => {
     fetch(`/api/payments/${paymentId}`, {
       method: 'PUT',
@@ -142,20 +157,21 @@ export default function OrdersView({ filter, onOrdersChanged }) {
               <th style={cs.th}>Status Saat Ini</th>
               <th style={cs.th}>Pembayaran</th>
               <th style={{...cs.th, textAlign:'right'}}>Ubah Status</th>
+              <th style={{...cs.th, textAlign:'right'}}>Aksi</th>
             </tr></thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="7" style={{...cs.td,textAlign:'center',padding:40,color:'#94a3b8'}}>Memuat pesanan...</td></tr>
+                <tr><td colSpan="8" style={{...cs.td,textAlign:'center',padding:40,color:'#94a3b8'}}>Memuat pesanan...</td></tr>
               ) : error ? (
                 <tr>
-                  <td colSpan="7" style={{...cs.td,textAlign:'center',padding:40,color:'#dc2626'}}>
+                  <td colSpan="8" style={{...cs.td,textAlign:'center',padding:40,color:'#dc2626'}}>
                     <div style={{display:'inline-flex',alignItems:'center',gap:8,fontWeight:700}}>
                       <AlertCircle size={18} /> {error}
                     </div>
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan="7" style={{...cs.td,textAlign:'center',padding:40,color:'#94a3b8'}}>Belum ada pesanan dalam kategori ini.</td></tr>
+                <tr><td colSpan="8" style={{...cs.td,textAlign:'center',padding:40,color:'#94a3b8'}}>Belum ada pesanan dalam kategori ini.</td></tr>
               ) : filtered.map(o => {
                 const sc = statusColors[o.status] || {bg:'#f1f5f9',color:'#475569'}
                 return (
@@ -209,6 +225,15 @@ export default function OrdersView({ filter, onOrdersChanged }) {
                           Lanjut ke {nextStatusMap[o.status]}
                         </button>
                       )}
+                    </td>
+                    <td style={{...cs.td,textAlign:'right'}}>
+                      <button
+                        onClick={() => handleDeleteOrder(o)}
+                        style={cs.iconBtn('#fef2f2','#b91c1c')}
+                        title="Hapus riwayat pesanan"
+                      >
+                        <Trash2 size={14}/>Hapus
+                      </button>
                     </td>
                   </tr>
                 )

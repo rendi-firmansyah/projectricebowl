@@ -525,6 +525,8 @@ const describeSmartOrderOptions = (item) => {
   return parts.length > 0 ? ` (${parts.join(', ')})` : ''
 }
 
+const isMenuUnavailable = (item) => String(item?.status || 'Tersedia').toLowerCase() !== 'tersedia'
+
 export default function SmartOrderPage() {
   const [text, setText] = useState('')
   const [menuList, setMenuList] = useState([])
@@ -757,9 +759,23 @@ export default function SmartOrderPage() {
       const parsedItems = parseSegmentsForItems(query, menuList, parseMessageForItems)
 
       if (parsedItems.length > 0) {
+        const availableItems = parsedItems.filter(item => !isMenuUnavailable(item))
+        const unavailableItems = parsedItems.filter(isMenuUnavailable)
+
+        if (availableItems.length === 0) {
+          const unavailableLines = unavailableItems.map(item => `- ${item.name} sedang habis`).join('\n')
+          setMessages(prev => [...prev, {
+            id: botMessageId,
+            sender: 'bot',
+            text: `Maaf, menu berikut sedang habis dan tidak bisa dipesan:\n${unavailableLines}\n\nSilakan pilih menu lain yang tersedia.`,
+            time: botTime
+          }])
+          return
+        }
+
         // Merge with current order
         let updatedOrder = [...currentOrder]
-        parsedItems.forEach(newItem => {
+        availableItems.forEach(newItem => {
           const newItemKey = getSmartOrderItemKey(newItem)
           const existingIndex = updatedOrder.findIndex(item => getSmartOrderItemKey(item) === newItemKey)
           if (existingIndex > -1) {
@@ -771,8 +787,11 @@ export default function SmartOrderPage() {
         setCurrentOrder(updatedOrder)
 
         // Generate bot speech response
-        const itemLines = parsedItems.map(item => `- ${item.quantity}x ${item.name}${describeSmartOrderOptions(item)}`).join('\n')
-        const textResponse = `Saya berhasil menambahkan:\n${itemLines}\n\nApakah ada tambahan menu lainnya? (Jika tidak, ketik "Selesai" atau "Cukup")`
+        const itemLines = availableItems.map(item => `- ${item.quantity}x ${item.name}${describeSmartOrderOptions(item)}`).join('\n')
+        const unavailableText = unavailableItems.length > 0
+          ? `\n\nMenu berikut tidak saya masukkan karena sedang habis:\n${unavailableItems.map(item => `- ${item.name}`).join('\n')}`
+          : ''
+        const textResponse = `Saya berhasil menambahkan:\n${itemLines}${unavailableText}\n\nApakah ada tambahan menu lainnya? (Jika tidak, ketik "Selesai" atau "Cukup")`
 
         setMessages(prev => [...prev, {
           id: botMessageId,
@@ -782,7 +801,7 @@ export default function SmartOrderPage() {
           time: botTime
         }])
       } else {
-        const recommendations = getSmartRecommendations(query, menuList)
+        const recommendations = getSmartRecommendations(query, menuList.filter(item => !isMenuUnavailable(item)))
         if (recommendations.length > 0) {
           const recommendationLines = recommendations.map(item => `- ${item.name} (${formatPrice(item.price)})`).join('\n')
           setMessages(prev => [...prev, {
@@ -818,8 +837,9 @@ export default function SmartOrderPage() {
   }
 
   const addAllToCart = (itemsToCheckout = currentOrder) => {
-    if (itemsToCheckout.length === 0) return
-    itemsToCheckout.forEach(item => {
+    const availableItems = itemsToCheckout.filter(item => !isMenuUnavailable(item))
+    if (availableItems.length === 0) return
+    availableItems.forEach(item => {
       for (let i = 0; i < item.quantity; i++) {
         addItem(item)
       }

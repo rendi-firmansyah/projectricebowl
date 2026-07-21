@@ -6,6 +6,8 @@ import { useAuth } from '../context/AuthContext'
 import { readFavoriteIds, toggleFavoriteId } from '../lib/favorites'
 import AddOnModal from '../components/AddOnModal'
 
+const isMenuSoldOut = (item) => String(item?.status || 'Tersedia').toLowerCase() === 'habis'
+
 export default function MenuPage() {
   const [activeCategory, setActiveCategory] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
@@ -35,6 +37,13 @@ export default function MenuPage() {
   })
 
   const handleAdd = (item) => {
+    if (isMenuSoldOut(item)) {
+      setToastMessage(`${item.name} sedang habis`)
+      setShowToast(true)
+      setTimeout(() => setShowToast(false), 2000)
+      return
+    }
+
     setSelectedAddOnItem(item)
   }
 
@@ -103,8 +112,10 @@ export default function MenuPage() {
         <div className="menu-item-count">{filteredItems.length} items found</div>
 
         <div className={`menu-items-grid ${viewMode === 'list' ? 'menu-items-list' : ''}`}>
-          {filteredItems.map((item, i) => (
-            <div key={item.id} className={`animate-fade-in card-hover menu-item-card ${viewMode}`} style={{ animationDelay: `${i * 0.04}s`, opacity: 0 }}>
+          {filteredItems.map((item, i) => {
+            const soldOut = isMenuSoldOut(item)
+            return (
+            <div key={item.id} className={`animate-fade-in card-hover menu-item-card ${viewMode} ${soldOut ? 'sold-out' : ''}`} style={{ animationDelay: `${i * 0.04}s`, opacity: 0 }}>
               <div className="menu-item-image">
                 <img src={optimizeImageUrl(item.image, viewMode === 'list' ? 220 : 360)} alt={item.name} loading="lazy" decoding="async" />
                 <button
@@ -118,6 +129,9 @@ export default function MenuPage() {
                 </button>
                 {item.isNew && (
                   <div className="menu-item-badge new"><Sparkles size={8} /> NEW</div>
+                )}
+                {soldOut && (
+                  <div className="menu-item-badge sold-out">HABIS</div>
                 )}
                 {item.originalPrice && (
                   <div className="menu-item-badge sale">{Math.round((1 - item.price / item.originalPrice) * 100)}% OFF</div>
@@ -138,11 +152,19 @@ export default function MenuPage() {
                     <span className="menu-item-price">{formatPrice(item.price)}</span>
                     {item.originalPrice && <span className="menu-item-old-price">{formatPrice(item.originalPrice)}</span>}
                   </div>
-                  <button onClick={() => handleAdd(item)} className="menu-add-btn"><Plus size={18} /></button>
+                  <button
+                    onClick={() => handleAdd(item)}
+                    className="menu-add-btn"
+                    disabled={soldOut}
+                    title={soldOut ? 'Menu sedang habis' : 'Tambah menu'}
+                  >
+                    <Plus size={18} />
+                  </button>
                 </div>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       </div>
       {showToast && <div className="toast">{toastMessage}</div>}
