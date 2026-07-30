@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Mail, Lock, User, LogIn, Sparkles, AlertCircle, ArrowLeft, Eye, EyeOff, CheckCircle, Phone } from 'lucide-react'
+import { Mail, Lock, User, LogIn, Sparkles, AlertCircle, Shield, ArrowLeft, Eye, EyeOff, CheckCircle, Phone } from 'lucide-react'
 
 export default function LoginPage() {
   const { user, admin, login, register } = useAuth()
@@ -117,6 +117,17 @@ export default function LoginPage() {
       }
       setLoading(false)
     }, 800)
+  }
+
+  const switchLoginMode = (mode) => {
+    setEmail('')
+    setPassword('')
+    setConfirmPassword('')
+    setIsSignUp(false)
+    setIsForgotPassword(false)
+    setError('')
+    setSuccessMessage('')
+    navigate(mode === 'admin' ? '/login?mode=admin' : '/login', { replace: true })
   }
 
   return (
@@ -317,6 +328,38 @@ export default function LoginPage() {
               Back to Sign In
             </button>
           </div>
+        )}
+
+        {!isForgotPassword && (
+          <>
+            <div className="login-divider">
+              <span className="login-divider-text">OR</span>
+            </div>
+
+            <div className="login-shortcuts">
+              {isAdminMode ? (
+                <button
+                  type="button"
+                  className="login-shortcut-btn"
+                  onClick={() => switchLoginMode('user')}
+                  disabled={loading}
+                >
+                  <User size={14} />
+                  <span>User Login</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="login-shortcut-btn admin-preset"
+                  onClick={() => switchLoginMode('admin')}
+                  disabled={loading}
+                >
+                  <Shield size={14} />
+                  <span>Admin Login</span>
+                </button>
+              )}
+            </div>
+          </>
         )}
 
         <div className="login-footer-note">
