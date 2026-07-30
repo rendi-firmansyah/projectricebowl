@@ -9,14 +9,25 @@ export const categories = [
 ]
 
 export const optimizeImageUrl = (url, size = 360) => {
-  if (!url || typeof url !== 'string') return url
-  if (url.startsWith('/uploads')) {
-    return apiUrl(url)
+  if (!url || typeof url !== 'string') return ''
+
+  const normalizedUrl = url.trim()
+  if (!normalizedUrl) return ''
+  if (normalizedUrl.startsWith('data:image/')) return normalizedUrl
+  if (normalizedUrl.startsWith('//')) return `https:${normalizedUrl}`
+  if (normalizedUrl.startsWith('/uploads')) {
+    return apiUrl(normalizedUrl)
   }
-  if (!url.includes('images.unsplash.com')) return url
+  if (normalizedUrl.startsWith('uploads/')) {
+    return apiUrl(`/${normalizedUrl}`)
+  }
+  if (/^[a-zA-Z]:[\\/]/.test(normalizedUrl)) {
+    return ''
+  }
+  if (!normalizedUrl.includes('images.unsplash.com')) return normalizedUrl
 
   try {
-    const imageUrl = new URL(url)
+    const imageUrl = new URL(normalizedUrl)
     imageUrl.searchParams.set('w', String(size))
     imageUrl.searchParams.set('h', String(size))
     imageUrl.searchParams.set('fit', 'crop')
@@ -24,8 +35,30 @@ export const optimizeImageUrl = (url, size = 360) => {
     imageUrl.searchParams.set('q', '75')
     return imageUrl.toString()
   } catch {
-    return url
+    return normalizedUrl
   }
+}
+
+export const fallbackMenuImage = (label = 'Menu') => {
+  const safeLabel = String(label || 'Menu')
+    .slice(0, 34)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="720" height="720" viewBox="0 0 720 720">
+      <rect width="720" height="720" fill="#f8fafc"/>
+      <circle cx="360" cy="300" r="150" fill="#fee2e2"/>
+      <circle cx="360" cy="300" r="112" fill="#ffffff"/>
+      <path d="M254 352c47 46 165 46 212 0" fill="none" stroke="#dc2626" stroke-width="22" stroke-linecap="round"/>
+      <path d="M260 274h200" stroke="#111827" stroke-width="18" stroke-linecap="round"/>
+      <path d="M292 236h136" stroke="#111827" stroke-width="18" stroke-linecap="round"/>
+      <text x="360" y="520" text-anchor="middle" font-family="Arial, sans-serif" font-size="36" font-weight="700" fill="#1f2937">${safeLabel}</text>
+      <text x="360" y="570" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#64748b">Gambar menu</text>
+    </svg>
+  `
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
 }
 
 export const cleanMenuName = (name = '') => name
@@ -314,7 +347,7 @@ export const getMenuItems = async () => {
     return data.map(item => ({
       ...item,
       name: cleanMenuName(item.name),
-      image: optimizeImageUrl(item.image),
+      image: optimizeImageUrl(item.image) || fallbackMenuImage(item.name),
       originalPrice: item.original_price,
       prepTime: item.prep_time,
       category: item.category_id,

@@ -2,7 +2,15 @@ const DEFAULT_PRODUCTION_API_URL = 'https://projectricebowl-production.up.railwa
 const configuredApiUrl = import.meta.env.VITE_API_BASE_URL || ''
 const isVercelHost = typeof window !== 'undefined' && window.location.hostname.endsWith('.vercel.app')
 
-export const API_BASE_URL = (configuredApiUrl || (isVercelHost ? DEFAULT_PRODUCTION_API_URL : '')).replace(/\/$/, '')
+const normalizeApiBaseUrl = (url) => {
+  const trimmed = String(url || '').trim().replace(/\/$/, '')
+  if (!trimmed) return ''
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed
+  if (trimmed.startsWith('localhost') || trimmed.startsWith('127.0.0.1')) return `http://${trimmed}`
+  return `https://${trimmed}`
+}
+
+export const API_BASE_URL = normalizeApiBaseUrl(configuredApiUrl || (isVercelHost ? DEFAULT_PRODUCTION_API_URL : ''))
 
 export const apiUrl = (path) => {
   if (!path) return API_BASE_URL || window.location.origin

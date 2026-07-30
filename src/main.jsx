@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { apiUrl } from './lib/api'
+import { fallbackMenuImage } from './data/menuData'
 import './index.css'
 
 const originalFetch = window.fetch.bind(window)
@@ -45,6 +46,15 @@ window.fetch = (input, init) => {
 
   return originalFetch(input, init)
 }
+
+window.addEventListener('error', (event) => {
+  const target = event.target
+  if (!(target instanceof HTMLImageElement)) return
+  if (target.dataset.fallbackApplied === 'true') return
+
+  target.dataset.fallbackApplied = 'true'
+  target.src = fallbackMenuImage(target.alt || 'Menu')
+}, true)
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
