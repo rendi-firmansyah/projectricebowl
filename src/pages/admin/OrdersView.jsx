@@ -49,6 +49,12 @@ const nextStatusMap = {
   'Sedang Diantar': 'Selesai',
 }
 
+const paymentMethodLabels = {
+  transfer: 'BCA Transfer',
+  gopay: 'QRIS',
+  cod: 'COD',
+}
+
 export default function OrdersView({ filter, onOrdersChanged }) {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
@@ -308,7 +314,7 @@ export default function OrdersView({ filter, onOrdersChanged }) {
               </button>
               <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:12,marginBottom:18}}>
                 <div><div style={{fontSize:12,color:'#64748b'}}>Customer</div><div style={{fontWeight:800}}>{selectedOrder.customer_name}</div></div>
-                <div><div style={{fontSize:12,color:'#64748b'}}>Metode</div><div style={{fontWeight:800}}>{selectedOrder.payment_method}</div></div>
+                <div><div style={{fontSize:12,color:'#64748b'}}>Metode</div><div style={{fontWeight:800}}>{paymentMethodLabels[selectedOrder.payment_method] || selectedOrder.payment_method}</div></div>
                 <div><div style={{fontSize:12,color:'#64748b'}}>Total</div><div style={{fontWeight:800,color:'#dc2626'}}>{formatPrice(selectedOrder.total)}</div></div>
               </div>
               {selectedOrder.note && (

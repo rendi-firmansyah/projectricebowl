@@ -5,7 +5,7 @@ import { formatPrice } from '../data/menuData'
 
 const paymentLabels = {
   transfer: 'BCA Bank Transfer',
-  gopay: 'GoPay QRIS',
+  gopay: 'QRIS',
   cod: 'Cash on Delivery',
 }
 

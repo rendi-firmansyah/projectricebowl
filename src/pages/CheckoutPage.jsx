@@ -5,10 +5,11 @@ import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { formatPrice, optimizeImageUrl } from '../data/menuData'
 import { buildItemNote, isCustomizableBowl, riceOptions, spiceOptions, toppingOptions } from '../data/orderOptions'
+import qrisCoupleBowl from '../assets/qris-couplebowl.png'
 
 const paymentMethods = [
   { id: 'transfer', name: 'BCA Bank Transfer', icon: 'Bank', desc: 'Transfer manually & upload proof' },
-  { id: 'gopay', name: 'GoPay QRIS', icon: 'QR', desc: 'Scan QRIS code & upload proof' },
+  { id: 'gopay', name: 'QRIS', icon: 'QR', desc: 'Scan QRIS, input nominal manually & upload proof' },
   { id: 'cod', name: 'Cash on Delivery', icon: 'COD', desc: 'Pay with cash upon delivery' },
 ]
 
@@ -387,29 +388,47 @@ export default function CheckoutPage() {
                     <>
                       <div className="bank-row">
                         <span style={{ color: '#6B7280' }}>QRIS Merchant:</span>
-                        <span style={{ fontWeight: 700 }}>Couple Bowl Restaurant</span>
+                        <span style={{ fontWeight: 700 }}>COUPLEBOWL, JATIASIH</span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'center', margin: '14px 0' }}>
-                        <div style={{ border: '2px solid #E5E7EB', padding: 12, borderRadius: 16, background: 'white', boxShadow: 'var(--shadow-card)' }}>
-                          <div style={{ width: 140, height: 140, background: '#111', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800, fontSize: 12, borderRadius: 8 }}>
-                            <span style={{ color: '#10B981', fontSize: 16, marginBottom: 4 }}>QRIS</span>
-                            <span style={{ fontSize: 9, opacity: 0.8 }}>Couple Bowl Indo</span>
-                            <div style={{ width: 60, height: 60, border: '4px solid white', background: 'black', margin: '8px 0' }} />
-                            <span style={{ fontSize: 8, opacity: 0.6 }}>NMID: ID102030405</span>
-                          </div>
+                      <div style={{
+                        margin: '14px 0',
+                        border: '1px solid #FCA5A5',
+                        borderRadius: 16,
+                        background: '#FEF2F2',
+                        padding: 14,
+                      }}>
+                        <div style={{ fontSize: 12, fontWeight: 800, color: '#991B1B', marginBottom: 6 }}>
+                          Total yang harus dibayar
+                        </div>
+                        <div style={{ fontSize: 26, fontWeight: 900, color: '#DC2626', lineHeight: 1 }}>
+                          {formatPrice(total)}
+                        </div>
+                        <div style={{ fontSize: 12, color: '#7F1D1D', marginTop: 8, lineHeight: 1.45 }}>
+                          QRIS ini bersifat statis. Setelah scan, masukkan nominal manual sesuai total pesanan di atas.
                         </div>
                       </div>
-                      <div style={{ fontSize: 12, color: '#9CA3AF', textAlign: 'center', lineHeight: 1.4 }}>
-                        Scan the QRIS code using GoPay, OVO, DANA, or any bank app.
+                      <div style={{ display: 'flex', justifyContent: 'center', margin: '14px 0' }}>
+                        <div style={{ border: '2px solid #E5E7EB', padding: 10, borderRadius: 16, background: 'white', boxShadow: 'var(--shadow-card)', width: 'min(100%, 320px)' }}>
+                          <img
+                            src={qrisCoupleBowl}
+                            alt="QRIS Couple Bowl"
+                            style={{ width: '100%', display: 'block', borderRadius: 12 }}
+                          />
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 12, color: '#6B7280', textAlign: 'center', lineHeight: 1.5 }}>
+                        Scan QRIS menggunakan aplikasi bank, GoPay, OVO, DANA, ShopeePay, atau aplikasi pembayaran lain yang mendukung QRIS. Setelah berhasil, upload bukti pembayaran di bawah.
                       </div>
                     </>
                   )}
                 </div>
 
-                <h3 style={{ fontSize: 15, fontWeight: 700, margin: '20px 0 10px' }}>Upload Proof of Transfer</h3>
+                <h3 style={{ fontSize: 15, fontWeight: 700, margin: '20px 0 10px' }}>
+                  Upload Bukti Pembayaran
+                </h3>
                 {proofImage ? (
                   <div className="proof-preview-container">
-                    <img src={proofImage} alt="Proof of transfer" className="proof-preview-img" />
+                    <img src={proofImage} alt="Bukti pembayaran" className="proof-preview-img" />
                     <button type="button" onClick={() => setProofImage(null)} className="proof-remove-btn">
                       <X size={16} />
                     </button>
@@ -417,7 +436,7 @@ export default function CheckoutPage() {
                 ) : (
                   <div className="proof-upload-zone" onClick={() => document.getElementById('proof-file-input').click()}>
                     <Upload size={24} style={{ color: '#9CA3AF', marginBottom: 8 }} />
-                    <p style={{ fontSize: 13, fontWeight: 600, color: '#4B5563' }}>Choose transfer receipt file</p>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: '#4B5563' }}>Pilih file bukti pembayaran</p>
                     <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4 }}>Supports JPG, JPEG, PNG (Max 5MB)</p>
                     <input 
                       id="proof-file-input" 

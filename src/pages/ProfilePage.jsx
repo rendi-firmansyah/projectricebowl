@@ -276,7 +276,7 @@ export default function ProfilePage() {
       )
     }
     if (activePanel === 'payment') {
-      return renderInfoPanel('Payment', 'Metode pembayaran aktif: transfer bank, GoPay, dan bayar di tempat sesuai pilihan checkout.', (
+      return renderInfoPanel('Payment', 'Metode pembayaran aktif: transfer bank, QRIS, dan bayar di tempat sesuai pilihan checkout.', (
         <Link to="/cart" className="btn-primary" style={{ padding: '8px 18px', fontSize: 13, textDecoration: 'none' }}>Lanjut ke Cart</Link>
       ))
     }

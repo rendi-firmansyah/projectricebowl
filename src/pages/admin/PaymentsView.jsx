@@ -27,6 +27,12 @@ const statusConfig = {
   'Rejected': { bg:'#fef2f2', color:'#b91c1c', icon: XCircle },
 }
 
+const paymentMethodLabels = {
+  transfer: 'BCA Transfer',
+  gopay: 'QRIS',
+  cod: 'COD',
+}
+
 export default function PaymentsView() {
   const [payments, setPayments] = useState([])
   const [loading, setLoading] = useState(true)
@@ -126,7 +132,7 @@ export default function PaymentsView() {
                   <tr key={p.id} onMouseEnter={e=>e.currentTarget.style.background='#f8fafc'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
                     <td style={cs.td}><span style={{fontWeight:700,fontFamily:'monospace'}}>#{p.id}</span></td>
                     <td style={cs.td}>#{p.order_number || p.order_id}</td>
-                    <td style={cs.td}><span style={cs.badge('#eff6ff','#2563eb')}>{p.payment_method || 'Transfer'}</span></td>
+                    <td style={cs.td}><span style={cs.badge('#eff6ff','#2563eb')}>{paymentMethodLabels[p.payment_method] || p.payment_method || 'Transfer'}</span></td>
                     <td style={cs.td}><span style={{fontWeight:700,color:'#059669'}}>{formatPrice(p.amount)}</span></td>
                     <td style={cs.td}>
                       <span style={{...cs.badge(sc.bg,sc.color),display:'inline-flex',alignItems:'center',gap:4}}>
