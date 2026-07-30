@@ -329,6 +329,29 @@ export const menuItems = [
   },
 ]
 
+const normalizeMenuLookupName = (name = '') => (
+  String(name)
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+)
+
+export const getMenuImageFallback = (itemOrName) => {
+  const id = typeof itemOrName === 'object' ? itemOrName?.id : null
+  const name = typeof itemOrName === 'object' ? itemOrName?.name : itemOrName
+  const normalizedName = normalizeMenuLookupName(cleanMenuName(name || ''))
+
+  const fallbackItem = menuItems.find(item => String(item.id) === String(id))
+    || menuItems.find(item => normalizeMenuLookupName(item.name) === normalizedName)
+    || menuItems.find(item => normalizedName && (
+      normalizeMenuLookupName(item.name).includes(normalizedName)
+      || normalizedName.includes(normalizeMenuLookupName(item.name))
+    ))
+
+  return fallbackItem?.image || ''
+}
+
 export const formatPrice = (price) => {
   return new Intl.NumberFormat('id-ID', {
     style: 'currency',
@@ -347,7 +370,8 @@ export const getMenuItems = async () => {
     return data.map(item => ({
       ...item,
       name: cleanMenuName(item.name),
-      image: optimizeImageUrl(item.image) || fallbackMenuImage(item.name),
+      image: optimizeImageUrl(item.image) || getMenuImageFallback(item) || fallbackMenuImage(item.name),
+      fallbackImage: getMenuImageFallback(item),
       originalPrice: item.original_price,
       prepTime: item.prep_time,
       category: item.category_id,

@@ -117,7 +117,13 @@ export default function MenuPage() {
             return (
             <div key={item.id} className={`animate-fade-in card-hover menu-item-card ${viewMode} ${soldOut ? 'sold-out' : ''}`} style={{ animationDelay: `${i * 0.04}s`, opacity: 0 }}>
               <div className="menu-item-image">
-                <img src={optimizeImageUrl(item.image, viewMode === 'list' ? 220 : 360)} alt={item.name} loading="lazy" decoding="async" />
+                <img
+                  src={optimizeImageUrl(item.image, viewMode === 'list' ? 220 : 360)}
+                  data-fallback-src={item.fallbackImage || ''}
+                  alt={item.name}
+                  loading="lazy"
+                  decoding="async"
+                />
                 <button
                   type="button"
                   className={`menu-favorite-btn ${favoriteIds.includes(String(item.id)) ? 'active' : ''}`}

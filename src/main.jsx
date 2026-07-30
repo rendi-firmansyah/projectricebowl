@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { apiUrl } from './lib/api'
-import { fallbackMenuImage } from './data/menuData'
+import { fallbackMenuImage, getMenuImageFallback, optimizeImageUrl } from './data/menuData'
 import './index.css'
 
 const originalFetch = window.fetch.bind(window)
@@ -50,9 +50,17 @@ window.fetch = (input, init) => {
 window.addEventListener('error', (event) => {
   const target = event.target
   if (!(target instanceof HTMLImageElement)) return
-  if (target.dataset.fallbackApplied === 'true') return
+  const step = Number(target.dataset.fallbackStep || 0)
+  if (step >= 2) return
 
-  target.dataset.fallbackApplied = 'true'
+  const menuFallback = optimizeImageUrl(target.dataset.fallbackSrc || getMenuImageFallback(target.alt || ''), 360)
+  if (step === 0 && menuFallback && target.currentSrc !== menuFallback && target.src !== menuFallback) {
+    target.dataset.fallbackStep = '1'
+    target.src = menuFallback
+    return
+  }
+
+  target.dataset.fallbackStep = '2'
   target.src = fallbackMenuImage(target.alt || 'Menu')
 }, true)
 
