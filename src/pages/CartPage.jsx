@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { formatPrice, optimizeImageUrl } from '../data/menuData'
-import { isCustomizableBowl } from '../data/orderOptions'
+import { defaultRiceOption, isCustomizableBowl } from '../data/orderOptions'
 
 export default function CartPage() {
   const { items, updateQuantity, removeItem, subtotal, deliveryFee, total, totalItems, getItemUnitPrice } = useCart()
@@ -51,6 +51,9 @@ export default function CartPage() {
                 )}
                 {isCustomizableBowl(item) && (
                   <div style={{fontSize:12,color:'#64748b',background:'#fff7ed',border:'1px solid #fed7aa',borderRadius:8,padding:'6px 8px',marginTop:8,lineHeight:1.5}}>
+                    {item.customization?.rice && item.customization.rice !== defaultRiceOption && (
+                      <div>Nasi: {item.customization.rice}</div>
+                    )}
                     Level: {item.customization?.spice || 'Tidak Pedas'}
                     {(item.customization?.toppings || []).length > 0 && (
                       <div>Topping: {item.customization.toppings.map(topping => topping.name).join(', ')}</div>

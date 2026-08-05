@@ -1,4 +1,6 @@
-export const riceOptions = ['Nasi Daun Jeruk', 'Nasi Bom Merah', 'Nasi Biasa']
+export const defaultRiceOption = 'Nasi Biasa'
+
+export const riceOptions = ['Nasi Biasa', 'Nasi Daun Jeruk', 'Nasi Bom Merah', 'Nasi Uduk']
 
 export const spiceOptions = ['Tidak Pedas', 'Pedas']
 
@@ -14,7 +16,7 @@ export const getDefaultCustomization = (item, options = {}) => {
   const includeDefaults = options.includeDefaults !== false
 
   return {
-    rice: includeDefaults && isCustomizableBowl(item) ? 'Nasi Daun Jeruk' : '',
+    rice: includeDefaults && isCustomizableBowl(item) ? defaultRiceOption : '',
     spice: includeDefaults && isCustomizableBowl(item) ? 'Tidak Pedas' : '',
     toppings: [],
   }
@@ -30,6 +32,10 @@ export const buildItemNote = (item) => {
   const details = []
 
   if (isCustomizableBowl(item)) {
+    if (item.customization?.rice && item.customization.rice !== defaultRiceOption) {
+      details.push(`Nasi: ${item.customization.rice}`)
+    }
+
     if (item.customization?.spice) details.push(`Level: ${item.customization.spice}`)
 
     const toppings = item.customization?.toppings || []

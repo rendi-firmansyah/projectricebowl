@@ -4,7 +4,7 @@ import { ChevronLeft, MapPin, CreditCard, ArrowRight, Upload, X } from 'lucide-r
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { formatPrice, optimizeImageUrl } from '../data/menuData'
-import { buildItemNote, isCustomizableBowl, riceOptions, spiceOptions, toppingOptions } from '../data/orderOptions'
+import { buildItemNote, defaultRiceOption, isCustomizableBowl, riceOptions, spiceOptions, toppingOptions } from '../data/orderOptions'
 import qrisCoupleBowl from '../assets/qris-couplebowl.png'
 
 const paymentMethods = [
@@ -230,9 +230,9 @@ export default function CheckoutPage() {
                             key={option}
                             onClick={() => updateItemOptions(item.cartKey, { rice: option })}
                             style={{
-                              border: `1px solid ${(item.customization?.rice || 'Nasi Daun Jeruk') === option ? '#DC2626' : '#E5E7EB'}`,
-                              background: (item.customization?.rice || 'Nasi Daun Jeruk') === option ? '#FEF2F2' : '#FFFFFF',
-                              color: (item.customization?.rice || 'Nasi Daun Jeruk') === option ? '#DC2626' : '#374151',
+                              border: `1px solid ${(item.customization?.rice || defaultRiceOption) === option ? '#DC2626' : '#E5E7EB'}`,
+                              background: (item.customization?.rice || defaultRiceOption) === option ? '#FEF2F2' : '#FFFFFF',
+                              color: (item.customization?.rice || defaultRiceOption) === option ? '#DC2626' : '#374151',
                               borderRadius: 999,
                               padding: '8px 12px',
                               fontSize: 12,

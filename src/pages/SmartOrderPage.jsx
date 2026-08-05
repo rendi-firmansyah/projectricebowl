@@ -3,7 +3,7 @@ import { Send, Sparkles, ShoppingCart, ChevronLeft, Zap, Trash2, ArrowRight, Ale
 import { Link } from 'react-router-dom'
 import { getMenuItems, formatPrice, optimizeImageUrl } from '../data/menuData'
 import { useCart } from '../context/CartContext'
-import { getEmptyCustomization, isCustomizableBowl } from '../data/orderOptions'
+import { defaultRiceOption, getEmptyCustomization, isCustomizableBowl } from '../data/orderOptions'
 
 const initialSuggestions = [
   "2 Nasi Jeruk + 2 Suwir",
@@ -181,7 +181,9 @@ const normalizeText = (value = '') =>
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\//g, ' ')
     .replace(/[.,!?;:()[\]{}"'`]/g, ' ')
+    .replace(/\bnasih\b/g, 'nasi')
     .replace(/\s+/g, ' ')
     .trim()
 
@@ -272,11 +274,55 @@ const extractItemNote = (input) => {
   return ''
 }
 
+const riceRequestOptions = [
+  {
+    option: 'Nasi Bom Merah',
+    aliases: ['nasi bom merah', 'nasi bom', 'bom merah', 'nasi merah', 'bom pedas'],
+  },
+  {
+    option: 'Nasi Daun Jeruk',
+    aliases: ['nasi daun jeruk', 'nasi jeruk', 'daun jeruk'],
+  },
+  {
+    option: 'Nasi Uduk',
+    aliases: ['nasi uduk', 'uduk'],
+  },
+  {
+    option: defaultRiceOption,
+    aliases: ['nasi biasa', 'nasi putih', 'nasi polos'],
+  },
+]
+
+const riceChangeIntentPattern = /\b(?:ganti|diganti|gantinya|gantiin|digantiin|pake|pakai|pakek|gunakan|ubah|rubah)\b/
+
+const getRequestedRiceOption = (input) => {
+  const normalized = normalizeText(input)
+  if (!riceChangeIntentPattern.test(normalized)) return ''
+
+  const hasRiceWord = /\bnasi\b/.test(normalized)
+  for (const entry of riceRequestOptions) {
+    const found = entry.aliases.some(alias => {
+      const normalizedAlias = normalizeText(alias)
+      return new RegExp(`(^|\\s)${escapeRegex(normalizedAlias)}(?=\\s|$)`).test(normalized)
+    })
+    if (found && (hasRiceWord || entry.option === 'Nasi Uduk')) return entry.option
+  }
+
+  return ''
+}
+
+const hasRiceReplacementRequest = (input) => Boolean(getRequestedRiceOption(input))
+
 const extractCustomization = (input, item) => {
   const customization = getEmptyCustomization(item)
   if (!isCustomizableBowl(item)) return customization
 
   const normalized = normalizeText(input)
+  const requestedRice = getRequestedRiceOption(input)
+  if (requestedRice) {
+    customization.rice = requestedRice
+  }
+
   if (/\b(tidak|ga|gak|nggak|enggak)\s+pedas\b/.test(normalized)) {
     customization.spice = 'Tidak Pedas'
   } else if (/\bpedas\b/.test(normalized)) {
@@ -289,6 +335,11 @@ const extractCustomization = (input, item) => {
 const shouldSkipSmartMatch = (input, item) => {
   const normalized = normalizeText(input)
   const itemName = normalizeText(item.name)
+
+  const isRiceItem = item.category === 'nasi' || item.category_id === 'nasi' || itemName.includes('nasi ')
+  if (isRiceItem && hasRiceReplacementRequest(input)) {
+    return true
+  }
 
   if (itemName.includes('risol ayam suwir') && !/\brisol\b/.test(normalized)) {
     return true
@@ -352,6 +403,7 @@ const parseSpiceQuantitySplit = (input, list, parseMessageForItems) => {
       ? nextItem.smartPosition.index
       : normalized.length
     const localText = normalized.slice(start, end)
+    const localCustomization = extractCustomization(localText, item)
 
     if (!isCustomizableBowl(item)) {
       items.push({
@@ -376,7 +428,7 @@ const parseSpiceQuantitySplit = (input, list, parseMessageForItems) => {
         items.push({
           ...item,
           quantity: spicyQty,
-          customization: { ...getEmptyCustomization(item), spice: 'Pedas' },
+          customization: { ...getEmptyCustomization(item), rice: localCustomization.rice || '', spice: 'Pedas' },
           note: '',
         })
       }
@@ -385,7 +437,7 @@ const parseSpiceQuantitySplit = (input, list, parseMessageForItems) => {
         items.push({
           ...item,
           quantity: notSpicyQty,
-          customization: { ...getEmptyCustomization(item), spice: 'Tidak Pedas' },
+          customization: { ...getEmptyCustomization(item), rice: localCustomization.rice || '', spice: 'Tidak Pedas' },
           note: '',
         })
       }
@@ -395,7 +447,9 @@ const parseSpiceQuantitySplit = (input, list, parseMessageForItems) => {
         items.push({
           ...item,
           quantity: remainingQty,
-          customization: getEmptyCustomization(item),
+          customization: localCustomization.rice
+            ? { ...getEmptyCustomization(item), rice: localCustomization.rice }
+            : getEmptyCustomization(item),
           note: '',
         })
       }
@@ -403,13 +457,12 @@ const parseSpiceQuantitySplit = (input, list, parseMessageForItems) => {
       return
     }
 
-    const localCustomization = extractCustomization(localText, item)
-    if (localCustomization.spice) hasLocalSpiceInstruction = true
+    if (localCustomization.spice || localCustomization.rice) hasLocalSpiceInstruction = true
 
     items.push({
       ...item,
       note: '',
-      customization: localCustomization.spice ? localCustomization : getEmptyCustomization(item),
+      customization: (localCustomization.spice || localCustomization.rice) ? localCustomization : getEmptyCustomization(item),
     })
   })
 
@@ -443,6 +496,7 @@ const parseSegmentsForItems = (input, list, parseMessageForItems) => {
       const customization = extractCustomization(segment, item)
       const key = [
         item.id,
+        customization.rice || '',
         customization.spice || '',
         segmentNote,
       ].join('::')
@@ -450,6 +504,7 @@ const parseSegmentsForItems = (input, list, parseMessageForItems) => {
         const existing = parsed.find(parsedItem => {
           const parsedKey = [
             parsedItem.id,
+            parsedItem.customization?.rice || '',
             parsedItem.customization?.spice || '',
             parsedItem.note || '',
           ].join('::')
@@ -510,6 +565,7 @@ const getSmartOrderItemKey = (item) => {
 
   return [
     item.id,
+    item.customization?.rice || '',
     item.customization?.spice || '',
     toppings,
     item.note || '',
@@ -519,6 +575,9 @@ const getSmartOrderItemKey = (item) => {
 const describeSmartOrderOptions = (item) => {
   const parts = []
   if (isCustomizableBowl(item)) {
+    if (item.customization?.rice && item.customization.rice !== defaultRiceOption) {
+      parts.push(item.customization.rice)
+    }
     if (item.customization?.spice) parts.push(item.customization.spice)
   }
   if (item.note) parts.push(item.note)
@@ -818,8 +877,8 @@ export default function SmartOrderPage() {
         const suggestions = getClosestMenuSuggestions(query, menuList)
         if (suggestions.length > 0) {
           fallbackText = `Saya belum yakin menu yang dimaksud. Mungkin maksud Anda salah satu ini?\n- ${suggestions.join('\n- ')}\n\nCoba ketik dengan jumlahnya, misalnya "1 ${suggestions[0]}".`
-        } else if (normalizeText(query).includes('nasi') && !normalizeText(query).includes('daun') && !normalizeText(query).includes('bom')) {
-          fallbackText = "Kami memiliki 3 pilihan nasi: 'Nasi Daun Jeruk', 'Nasi Bom Merah', atau 'Nasi Biasa'. Pilihan nasi mana yang Anda inginkan?"
+        } else if (normalizeText(query).includes('nasi') && !normalizeText(query).includes('daun') && !normalizeText(query).includes('bom') && !normalizeText(query).includes('uduk')) {
+          fallbackText = "Kami memiliki pilihan nasi: 'Nasi Biasa', 'Nasi Daun Jeruk', 'Nasi Bom Merah', atau 'Nasi Uduk'. Jika ingin mengganti nasi rice bowl, ketik contoh: '1 ayam suwir pake nasi bom merah'."
         }
 
         setMessages(prev => [...prev, {
@@ -906,7 +965,7 @@ export default function SmartOrderPage() {
                 }}>
                   <AlertCircle size={17} />
                 </div>
-                <span><strong>Format penting:</strong> Contoh: 10 ayam suwir, 5 pedas, 5 tidak pedas, 10 nasi daun jeruk. Pisahkan setiap menu dengan koma agar terbaca akurat.</span>
+                <span><strong>Format penting:</strong> Contoh: 1 ayam suwir pake nasi bom merah, 2 ayam katsu diganti nasi uduk. Pisahkan setiap menu dengan koma agar terbaca akurat.</span>
               </div>
             </div>
             <span style={{ fontSize: 11, color: '#10B981', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600, marginTop: 2 }}>
