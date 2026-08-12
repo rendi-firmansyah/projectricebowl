@@ -1,14 +1,6 @@
-const configuredApiUrl = import.meta.env.VITE_API_BASE_URL || ''
-
-const normalizeApiBaseUrl = (url) => {
-  const trimmed = String(url || '').trim().replace(/\/$/, '')
-  if (!trimmed) return ''
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed
-  if (trimmed.startsWith('localhost') || trimmed.startsWith('127.0.0.1')) return `http://${trimmed}`
-  return `https://${trimmed}`
-}
-
-export const API_BASE_URL = normalizeApiBaseUrl(configuredApiUrl)
+// For both local development (using Vite dev server proxy) and Vercel production,
+// relative same-origin paths are used. No external API base URL environment variable is needed.
+export const API_BASE_URL = ''
 
 export const apiUrl = (path) => {
   if (!path) return API_BASE_URL || window.location.origin
