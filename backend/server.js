@@ -69,8 +69,12 @@ const clientOrigins = (requireProductionEnv('CLIENT_URL', '') || '')
   .filter(Boolean);
 const vercelProjectPrefix = process.env.VERCEL_PROJECT_PREFIX || 'projectricebowl';
 
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+try {
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+} catch (e) {
+  console.warn('Could not create upload directory:', e.message);
 }
 
 app.disable('x-powered-by');
@@ -135,8 +139,12 @@ const saveDataUrlImage = (value, folder) => {
   const ext = match[1] === 'jpeg' ? 'jpg' : match[1].replace('+xml', '');
   const safeExt = ['jpg', 'png', 'webp', 'gif'].includes(ext) ? ext : 'png';
   const targetDir = path.join(uploadDir, folder);
-  if (!fs.existsSync(targetDir)) {
-    fs.mkdirSync(targetDir, { recursive: true });
+  try {
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+    }
+  } catch (e) {
+    console.warn('Could not create target directory:', e.message);
   }
 
   const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}.${safeExt}`;
@@ -426,34 +434,27 @@ const seedInitialMenu = async () => {
   }
 };
 
-const ensureColumn = (tableName, columnName, definition) => {
-  const query = `
-    SELECT COUNT(*) AS total
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = ?
-      AND COLUMN_NAME = ?
-  `;
+const ensureColumn = async (tableName, columnName, definition) => {
+  try {
+    const query = `
+      SELECT COUNT(*) AS total
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = ?
+        AND COLUMN_NAME = ?
+    `;
 
-  db.query(query, [tableName, columnName], (err, rows) => {
-    if (err) {
-      console.error(`Failed checking ${tableName}.${columnName}:`, err.message);
-      return;
-    }
-
+    const [rows] = await queryAsync(query, [tableName, columnName]);
     if (rows[0]?.total > 0) return;
 
-    db.query(`ALTER TABLE \`${tableName}\` ADD COLUMN \`${columnName}\` ${definition}`, (alterErr) => {
-      if (alterErr) {
-        console.error(`Failed adding ${tableName}.${columnName}:`, alterErr.message);
-      } else {
-        console.log(`Added missing column ${tableName}.${columnName}`);
-      }
-    });
-  });
+    await queryAsync(`ALTER TABLE \`${tableName}\` ADD COLUMN \`${columnName}\` ${definition}`);
+    console.log(`Added missing column ${tableName}.${columnName}`);
+  } catch (err) {
+    console.error(`Failed checking ${tableName}.${columnName}:`, err.message);
+  }
 };
 
-const normalizeMenuNames = () => {
+const normalizeMenuNames = async () => {
   const updates = [
     {
       from: 'Ayam Suwir Pedas Rice Bowl',
@@ -469,18 +470,19 @@ const normalizeMenuNames = () => {
     }
   ];
 
-  updates.forEach(item => {
-    db.query(
-      'UPDATE menu_items SET name = ?, description = ?, tags = ? WHERE name = ?',
-      [item.to, item.description, item.tags, item.from],
-      (err) => {
-        if (err) console.error(`Failed normalizing menu name ${item.from}:`, err.message);
-      }
-    );
-  });
+  for (const item of updates) {
+    try {
+      await queryAsync(
+        'UPDATE menu_items SET name = ?, description = ?, tags = ? WHERE name = ?',
+        [item.to, item.description, item.tags, item.from]
+      );
+    } catch (err) {
+      console.error(`Failed normalizing menu name ${item.from}:`, err.message);
+    }
+  }
 };
 
-const ensureAuthUsers = () => {
+const ensureAuthUsers = async () => {
   const createTable = `
     CREATE TABLE IF NOT EXISTS auth_users (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -494,42 +496,38 @@ const ensureAuthUsers = () => {
     )
   `;
 
-  db.query(createTable, (err) => {
-    if (err) {
-      console.error('Failed creating auth_users:', err.message);
-      return;
-    }
+  try {
+    await queryAsync(createTable);
 
     const defaults = [
       { name: 'Admin Couple Bowl', email: 'admin@couplebowl.com', password: 'admin', role: 'admin' },
       { name: 'Alex Thompson', email: 'alex.t@email.com', password: 'user123', role: 'user' }
     ];
 
-    defaults.forEach(user => {
-      db.query('SELECT id FROM auth_users WHERE email = ?', [user.email], (findErr, rows) => {
-        if (findErr || rows.length > 0) return;
-        db.query(
+    for (const user of defaults) {
+      const [rows] = await queryAsync('SELECT id FROM auth_users WHERE email = ?', [user.email]);
+      if (rows.length === 0) {
+        await queryAsync(
           'INSERT INTO auth_users (name, email, password_hash, role) VALUES (?, ?, ?, ?)',
-          [user.name, user.email, hashPassword(user.password), user.role],
-          (insertErr) => {
-            if (insertErr) console.error(`Failed seeding auth user ${user.email}:`, insertErr.message);
-          }
+          [user.name, user.email, hashPassword(user.password), user.role]
         );
-      });
-    });
-  });
+      }
+    }
+  } catch (err) {
+    console.error('Failed creating or seeding auth_users:', err.message);
+  }
 };
 
 const bootstrapDatabase = async () => {
   try {
     await ensureCoreTables();
     await seedInitialMenu();
-    ensureColumn('order_items', 'item_note', 'TEXT NULL');
-    ensureColumn('payments', 'rejection_reason', 'TEXT NULL');
-    ensureColumn('auth_users', 'phone', 'VARCHAR(50) NULL');
-    ensureColumn('auth_users', 'address', 'TEXT NULL');
-    normalizeMenuNames();
-    ensureAuthUsers();
+    await ensureColumn('order_items', 'item_note', 'TEXT NULL');
+    await ensureColumn('payments', 'rejection_reason', 'TEXT NULL');
+    await ensureColumn('auth_users', 'phone', 'VARCHAR(50) NULL');
+    await ensureColumn('auth_users', 'address', 'TEXT NULL');
+    await normalizeMenuNames();
+    await ensureAuthUsers();
     console.log('Database bootstrap completed');
   } catch (err) {
     console.error('Database bootstrap failed:', err.message);
@@ -1283,6 +1281,10 @@ app.get('/api/dashboard', requireAdmin, (req, res) => {
   });
 });
 
-app.listen(port, () => {
-  console.log(`Backend server running on port ${port}`);
-});
+if (require.main === module && !process.env.VERCEL) {
+  app.listen(port, () => {
+    console.log(`Backend server running on port ${port}`);
+  });
+}
+
+module.exports = app;

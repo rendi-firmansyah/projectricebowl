@@ -1,6 +1,4 @@
-const DEFAULT_PRODUCTION_API_URL = 'https://projectricebowl-production.up.railway.app'
 const configuredApiUrl = import.meta.env.VITE_API_BASE_URL || ''
-const isVercelHost = typeof window !== 'undefined' && window.location.hostname.endsWith('.vercel.app')
 
 const normalizeApiBaseUrl = (url) => {
   const trimmed = String(url || '').trim().replace(/\/$/, '')
@@ -10,7 +8,7 @@ const normalizeApiBaseUrl = (url) => {
   return `https://${trimmed}`
 }
 
-export const API_BASE_URL = normalizeApiBaseUrl(configuredApiUrl || (isVercelHost ? DEFAULT_PRODUCTION_API_URL : ''))
+export const API_BASE_URL = normalizeApiBaseUrl(configuredApiUrl)
 
 export const apiUrl = (path) => {
   if (!path) return API_BASE_URL || window.location.origin
