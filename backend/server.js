@@ -32,6 +32,7 @@ loadEnvFile(path.join(__dirname, '..', '.env'));
 
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const isProduction = NODE_ENV === 'production';
+const isVercel = Boolean(process.env.VERCEL);
 
 const requireProductionEnv = (key, fallback) => {
   const value = process.env[key] ?? fallback;
@@ -131,6 +132,10 @@ app.get('/api/health', (req, res) => {
 const saveDataUrlImage = (value, folder) => {
   if (!value || typeof value !== 'string' || !value.startsWith('data:image/')) {
     return value || null;
+  }
+
+  if (isVercel) {
+    return value;
   }
 
   const match = value.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,(.+)$/);
@@ -265,7 +270,7 @@ const ensureCoreTables = async () => {
       description TEXT,
       price INT NOT NULL DEFAULT 0,
       original_price INT NULL,
-      image TEXT,
+      image MEDIUMTEXT,
       category_id VARCHAR(80),
       is_popular TINYINT(1) DEFAULT 0,
       is_new TINYINT(1) DEFAULT 0,
@@ -322,7 +327,7 @@ const ensureCoreTables = async () => {
       order_id INT NOT NULL,
       amount INT NOT NULL DEFAULT 0,
       status VARCHAR(50) DEFAULT 'Pending',
-      proof_image TEXT NULL,
+      proof_image MEDIUMTEXT NULL,
       rejection_reason TEXT NULL,
       verified_at TIMESTAMP NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -348,7 +353,7 @@ const ensureCoreTables = async () => {
       id INT AUTO_INCREMENT PRIMARY KEY,
       title VARCHAR(150) NOT NULL,
       type VARCHAR(80) DEFAULT 'food',
-      image_url TEXT NOT NULL,
+      image_url MEDIUMTEXT NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -392,6 +397,14 @@ const ensureCoreTables = async () => {
     console.log('Added status column to menu_items');
   } catch (err) {
     // Column already exists or table is not ready
+  }
+
+  try {
+    await queryAsync('ALTER TABLE menu_items MODIFY COLUMN image MEDIUMTEXT');
+    await queryAsync('ALTER TABLE payments MODIFY COLUMN proof_image MEDIUMTEXT NULL');
+    await queryAsync('ALTER TABLE gallery MODIFY COLUMN image_url MEDIUMTEXT NOT NULL');
+  } catch (err) {
+    console.warn('Could not widen image columns:', err.message);
   }
 };
 
@@ -534,7 +547,7 @@ const bootstrapDatabase = async () => {
   }
 };
 
-bootstrapDatabase();
+const databaseReady = bootstrapDatabase();
 
 app.post('/api/auth/login', (req, res) => {
   const { email, password, expectedRole } = req.body;
@@ -681,9 +694,10 @@ app.delete('/api/categories/:id', requireAdmin, (req, res) => {
 });
 
 // Menu Items
-app.get('/api/menu', (req, res) => {
-  db.query('SELECT * FROM menu_items', (err, results) => {
-    if (err) return res.status(500).json(err);
+app.get('/api/menu', async (req, res) => {
+  try {
+    await databaseReady;
+    const [results] = await queryAsync('SELECT * FROM menu_items ORDER BY id ASC');
     const formatted = results.map(item => ({
       ...item,
       isPopular: item.is_popular === 1,
@@ -691,7 +705,10 @@ app.get('/api/menu', (req, res) => {
       tags: item.tags ? item.tags.split(',') : []
     }));
     res.json(formatted);
-  });
+  } catch (err) {
+    console.error('Error fetching menu:', err);
+    res.status(500).json({ message: 'Gagal memuat daftar menu', error: err.message });
+  }
 });
 
 app.post('/api/menu', requireAdmin, (req, res) => {

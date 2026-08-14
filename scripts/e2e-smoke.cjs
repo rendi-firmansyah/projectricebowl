@@ -1,7 +1,7 @@
 const BASE_URL = process.env.API_BASE_URL;
 
 if (!BASE_URL) {
-  console.error('API_BASE_URL is required. Example: API_BASE_URL=https://your-backend.up.railway.app npm run test:e2e');
+  console.error('API_BASE_URL is required. Example: API_BASE_URL=https://your-project.vercel.app npm run test:e2e');
   process.exit(1);
 }
 

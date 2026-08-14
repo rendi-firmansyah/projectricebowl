@@ -27,12 +27,12 @@ const main = async () => {
   const host = readArg('host', process.env.MYSQLHOST || process.env.DB_HOST);
   const port = Number(readArg('port', process.env.MYSQLPORT || process.env.DB_PORT || 3306));
   const user = readArg('user', process.env.MYSQLUSER || process.env.DB_USER || 'root');
-  const database = readArg('database', process.env.MYSQLDATABASE || process.env.DB_NAME || 'railway');
+  const database = readArg('database', process.env.MYSQLDATABASE || process.env.DB_NAME || 'rendiweb_db');
   const password = readArg('password', process.env.MYSQLPASSWORD || process.env.DB_PASSWORD) || await askPassword();
   const schemaPath = path.resolve(__dirname, '..', '..', 'schema.sql');
 
   if (!host) {
-    throw new Error('Missing host. Use --host HOST_RAILWAY');
+    throw new Error('Missing host. Use --host DB_HOST');
   }
 
   if (!fs.existsSync(schemaPath)) {

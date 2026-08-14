@@ -23,16 +23,40 @@ const cs = {
 export default function MenuListView({ onAdd, onEdit }) {
   const [menuList, setMenuList] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [filterCat, setFilterCat] = useState('all')
   const [categories, setCategories] = useState([])
 
   const fetchMenu = () => {
     setLoading(true)
-    fetch('/api/menu').then(r=>r.json()).then(data => { setMenuList(data); setLoading(false) }).catch(() => setLoading(false))
+    setError('')
+    fetch('/api/menu')
+      .then(async r => {
+        const data = await r.json().catch(() => null)
+        if (!r.ok) throw new Error(data?.message || data?.error || 'Gagal memuat daftar menu')
+        if (!Array.isArray(data)) throw new Error('Format data menu tidak valid')
+        return data
+      })
+      .then(data => {
+        setMenuList(data)
+        setLoading(false)
+      })
+      .catch(err => {
+        console.error(err)
+        setMenuList([])
+        setError(err.message || 'Gagal memuat daftar menu')
+        setLoading(false)
+      })
   }
   const fetchCategories = () => {
-    fetch('/api/categories').then(r=>r.json()).then(data => setCategories(data)).catch(console.error)
+    fetch('/api/categories')
+      .then(async r => {
+        const data = await r.json().catch(() => [])
+        return Array.isArray(data) ? data : []
+      })
+      .then(data => setCategories(data))
+      .catch(console.error)
   }
   useEffect(() => { fetchMenu(); fetchCategories(); }, [])
 
@@ -78,6 +102,8 @@ export default function MenuListView({ onAdd, onEdit }) {
             <tbody>
               {loading ? (
                 <tr><td colSpan="6" style={{...cs.td,textAlign:'center',padding:40,color:'#94a3b8'}}>Memuat data menu...</td></tr>
+              ) : error ? (
+                <tr><td colSpan="6" style={{...cs.td,textAlign:'center',padding:40,color:'#dc2626',fontWeight:700}}>{error}</td></tr>
               ) : filtered.length === 0 ? (
                 <tr><td colSpan="6" style={{...cs.td,textAlign:'center',padding:40,color:'#94a3b8'}}>Tidak ada menu ditemukan.</td></tr>
               ) : filtered.map(item => (
