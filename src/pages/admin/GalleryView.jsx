@@ -1,17 +1,23 @@
 import { useState, useEffect } from 'react'
-import { Plus, Image as ImageIcon, X, Trash2, CheckCircle } from 'lucide-react'
+import { Plus, Image as ImageIcon, X, Trash2, CheckCircle, Upload, Link as LinkIcon } from 'lucide-react'
 
 const cs = {
   h1: { fontSize:24, fontWeight:800, color:'#0f172a', marginBottom:4 },
   sub: { fontSize:14, color:'#64748b', marginBottom:24 },
   addBtn: { display:'inline-flex', alignItems:'center', gap:8, padding:'10px 20px', borderRadius:10, fontSize:14, fontWeight:700, cursor:'pointer', border:'none', background:'#dc2626', color:'#fff' },
-  modalOverlay: { position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyOrigin:'center', justifyContent:'center', zIndex:999, padding:20 },
-  modal: { background:'#fff', borderRadius:16, width:'100%', maxWidth:480, padding:24, boxShadow:'0 20px 25px -5px rgba(0,0,0,0.1)' },
-  modalTitle: { fontSize:18, fontWeight:800, color:'#0f172a', marginBottom:20, display:'flex', justifyContent:'space-between', alignItems:'center' },
+  modalOverlay: { position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(15,23,42,0.68)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9998, padding:20, backdropFilter:'blur(4px)' },
+  modal: { background:'#fff', borderRadius:18, width:'100%', maxWidth:560, maxHeight:'calc(100vh - 40px)', overflow:'hidden', boxShadow:'0 28px 70px rgba(15,23,42,0.35)', display:'flex', flexDirection:'column' },
+  modalTitle: { fontSize:18, fontWeight:800, color:'#0f172a', display:'flex', justifyContent:'space-between', alignItems:'center', padding:'18px 22px', borderBottom:'1px solid #fee2e2', background:'linear-gradient(135deg, #fff7f7 0%, #ffffff 70%)' },
+  modalBody: { padding:22, overflowY:'auto', display:'flex', flexDirection:'column', gap:16, flex:'1 1 auto', minHeight:0 },
+  modalFooter: { display:'flex', justifyContent:'flex-end', gap:12, padding:'16px 22px', borderTop:'1px solid #e2e8f0', background:'#fff', flexShrink:0 },
   label: { display:'block', fontSize:13, fontWeight:700, color:'#334155', marginBottom:8 },
-  input: { width:'100%', padding:'12px 16px', borderRadius:8, border:'1px solid #e2e8f0', background:'#f8fafc', outline:'none', fontSize:14, boxSizing:'border-box', marginBottom:16 },
+  input: { width:'100%', padding:'12px 16px', borderRadius:10, border:'1px solid #e2e8f0', background:'#f8fafc', outline:'none', fontSize:14, boxSizing:'border-box' },
   btn: (bg,color) => ({ display:'inline-flex', alignItems:'center', gap:8, padding:'10px 20px', borderRadius:10, fontSize:14, fontWeight:700, cursor:'pointer', border:'1px solid #e2e8f0', background:bg, color }),
-  deleteBtn: { position:'absolute', top:8, right:8, padding:8, background:'rgba(255,255,255,0.9)', color:'#dc2626', border:'none', borderRadius:'50%', cursor:'pointer', display:'flex', alignItems:'center', boxShadow:'0 2px 4px rgba(0,0,0,0.1)' }
+  deleteBtn: { position:'absolute', top:8, right:8, padding:8, background:'rgba(255,255,255,0.9)', color:'#dc2626', border:'none', borderRadius:'50%', cursor:'pointer', display:'flex', alignItems:'center', boxShadow:'0 2px 4px rgba(0,0,0,0.1)' },
+  uploadBox: { border:'1px dashed #fca5a5', borderRadius:16, background:'#fff7f7', padding:18, textAlign:'center' },
+  fileButton: { display:'inline-flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', padding:'13px 16px', borderRadius:12, border:'1px solid #dc2626', background:'#dc2626', color:'#fff', fontSize:14, fontWeight:800, cursor:'pointer' },
+  previewWrap: { border:'1px solid #e2e8f0', borderRadius:16, background:'#f8fafc', padding:12 },
+  previewImg: { width:'100%', maxHeight:'min(300px, 36vh)', objectFit:'contain', borderRadius:12, background:'#fff', display:'block' }
 }
 
 export default function GalleryView() {
@@ -107,43 +113,62 @@ export default function GalleryView() {
       )}
 
       {showModal && (
-        <div style={cs.modalOverlay}>
-          <div style={cs.modal}>
+        <div style={cs.modalOverlay} onClick={() => !uploading && setShowModal(false)}>
+          <div style={cs.modal} onClick={e => e.stopPropagation()}>
             <div style={cs.modalTitle}>
-              <span>Upload Foto Baru</span>
-              <X size={20} style={{cursor:'pointer',color:'#64748b'}} onClick={() => setShowModal(false)}/>
-            </div>
-            <form onSubmit={handleSubmit}>
-              <div>
-                <label style={cs.label}>Judul/Caption</label>
-                <input style={cs.input} placeholder="Misal: Suasana Restoran Malam Hari" value={title} onChange={e=>setTitle(e.target.value)}/>
-              </div>
-              <div>
-                <label style={cs.label}>Tipe Foto</label>
-                <select style={cs.input} value={type} onChange={e=>setType(e.target.value)}>
-                  <option value="food">Makanan/Menu</option>
-                  <option value="restaurant">Restoran/Suasana</option>
-                  <option value="banner">Banner Depan</option>
-                </select>
-              </div>
-              <div>
-                <label style={cs.label}>Pilih File Gambar</label>
-                <input type="file" accept="image/*" style={cs.input} onChange={handleFileChange}/>
-              </div>
-              <div style={{fontSize:12,color:'#94a3b8',textAlign:'center',marginBottom:16}}>atau isi URL gambar langsung dibawah ini</div>
-              <div>
-                <label style={cs.label}>URL Gambar</label>
-                <input style={cs.input} placeholder="https://..." value={imageUrl} onChange={e=>setImageUrl(e.target.value)}/>
-              </div>
-
-              {imageUrl && (
-                <div style={{marginBottom:16,textAlign:'center'}}>
-                  <label style={cs.label}>Pratinjau:</label>
-                  <img src={imageUrl} alt="preview" style={{width:'100%',maxHeight:150,objectFit:'contain',borderRadius:8,border:'1px solid #e2e8f0'}}/>
+              <div style={{display:'flex',alignItems:'center',gap:10}}>
+                <div style={{width:34,height:34,borderRadius:12,background:'#fee2e2',color:'#dc2626',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                  <ImageIcon size={18}/>
                 </div>
-              )}
+                <div>
+                  <div>Upload Foto Baru</div>
+                  <div style={{fontSize:12,fontWeight:600,color:'#64748b',marginTop:2}}>Tambahkan dokumentasi untuk halaman galeri</div>
+                </div>
+              </div>
+              <button type="button" style={{border:'none',background:'#fff',cursor:'pointer',color:'#64748b',display:'flex',padding:8,borderRadius:10}} onClick={() => setShowModal(false)} disabled={uploading}>
+                <X size={20}/>
+              </button>
+            </div>
+            <form onSubmit={handleSubmit} style={{display:'flex',flexDirection:'column',minHeight:0,flex:'1 1 auto'}}>
+              <div style={cs.modalBody}>
+                <div>
+                  <label style={cs.label}>Judul/Caption</label>
+                  <input style={cs.input} placeholder="Misal: Suasana Restoran Malam Hari" value={title} onChange={e=>setTitle(e.target.value)}/>
+                </div>
+                <div>
+                  <label style={cs.label}>Tipe Foto</label>
+                  <select style={cs.input} value={type} onChange={e=>setType(e.target.value)}>
+                    <option value="food">Makanan/Menu</option>
+                    <option value="restaurant">Restoran/Suasana</option>
+                    <option value="banner">Banner Depan</option>
+                  </select>
+                </div>
+                <div style={cs.uploadBox}>
+                  <label style={cs.label}>Pilih File Gambar</label>
+                  <label style={cs.fileButton}>
+                    <Upload size={16}/>
+                    <span>{imageUrl ? 'Ganti Foto Galeri' : 'Upload Foto Galeri'}</span>
+                    <input type="file" accept="image/*" onChange={handleFileChange} style={{display:'none'}}/>
+                  </label>
+                  <div style={{fontSize:12,color:'#64748b',marginTop:10}}>Jika foto sudah terpilih, preview akan tampil di bawah dan tombol Simpan tetap tersedia.</div>
+                </div>
+                <div>
+                  <label style={cs.label}>URL Gambar</label>
+                  <div style={{position:'relative'}}>
+                    <LinkIcon size={16} style={{position:'absolute',left:14,top:14,color:'#94a3b8'}}/>
+                    <input style={{...cs.input,paddingLeft:40}} placeholder="https://..." value={imageUrl} onChange={e=>setImageUrl(e.target.value)}/>
+                  </div>
+                </div>
 
-              <div style={{display:'flex',justifyContent:'flex-end',gap:12,marginTop:20}}>
+                {imageUrl && (
+                  <div style={cs.previewWrap}>
+                    <label style={cs.label}>Pratinjau Foto</label>
+                    <img src={imageUrl} alt="preview" style={cs.previewImg}/>
+                  </div>
+                )}
+              </div>
+
+              <div style={cs.modalFooter}>
                 <button type="button" style={cs.btn('#fff','#475569')} onClick={() => setShowModal(false)}>Batal</button>
                 <button type="submit" disabled={uploading} style={cs.btn('#dc2626','#fff')}>
                   {uploading ? 'Menyimpan...' : <><CheckCircle size={16}/>Simpan</>}
