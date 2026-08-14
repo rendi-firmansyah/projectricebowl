@@ -603,12 +603,25 @@ const bootstrapDatabase = async () => {
 
 const databaseReady = bootstrapDatabase();
 
-app.post('/api/auth/login', (req, res) => {
-  const { email, password, expectedRole } = req.body;
-  if (!email || !password) return res.status(400).json({ message: 'Email and password are required' });
+app.get('/api/auth-health', async (req, res) => {
+  try {
+    await databaseReady;
+    const [rows] = await queryAsync('SELECT COUNT(*) AS total FROM auth_users');
+    res.json({ status: 'ok', authUsers: rows[0]?.total || 0 });
+  } catch (err) {
+    console.error('Auth health check failed:', err);
+    res.status(500).json({ status: 'error', message: 'Auth table check failed', code: err.code, error: err.message });
+  }
+});
 
-  db.query('SELECT * FROM auth_users WHERE email = ?', [email], (err, rows) => {
-    if (err) return res.status(500).json(err);
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    await databaseReady;
+
+    const { email, password, expectedRole } = req.body;
+    if (!email || !password) return res.status(400).json({ message: 'Email and password are required' });
+
+    const [rows] = await queryAsync('SELECT * FROM auth_users WHERE email = ?', [email]);
     const user = rows[0];
     if (!user || !verifyPassword(password, user.password_hash)) {
       return res.status(401).json({ message: 'Email atau password salah' });
@@ -624,80 +637,94 @@ app.post('/api/auth/login', (req, res) => {
 
     const sessionUser = { id: user.id, name: user.name, email: user.email, role: user.role, phone: user.phone || null, address: user.address || null };
     res.json({ user: sessionUser, token: createToken(sessionUser) });
-  });
+  } catch (err) {
+    console.error('Auth login failed:', err);
+    res.status(500).json({ message: 'Gagal login ke server auth', code: err.code, error: err.message });
+  }
 });
 
-app.post('/api/auth/register', (req, res) => {
-  const { name, email, password, phone } = req.body;
-  if (!name || !email || !password) return res.status(400).json({ message: 'Name, email, and password are required' });
-  if (String(password).length < 6) return res.status(400).json({ message: 'Password minimal 6 karakter' });
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    await databaseReady;
 
-  db.query(
-    'INSERT INTO auth_users (name, email, password_hash, role, phone, address) VALUES (?, ?, ?, ?, ?, ?)',
-    [name, email, hashPassword(password), 'user', phone || null, null],
-    (err, result) => {
-      if (err) {
-        if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ message: 'Email sudah terdaftar' });
-        return res.status(500).json(err);
-      }
+    const { name, email, password, phone } = req.body;
+    if (!name || !email || !password) return res.status(400).json({ message: 'Name, email, and password are required' });
+    if (String(password).length < 6) return res.status(400).json({ message: 'Password minimal 6 karakter' });
 
-      const sessionUser = { id: result.insertId, name, email, role: 'user', phone: phone || null, address: null };
-      res.status(201).json({ user: sessionUser, token: createToken(sessionUser) });
-    }
-  );
+    const [result] = await queryAsync(
+      'INSERT INTO auth_users (name, email, password_hash, role, phone, address) VALUES (?, ?, ?, ?, ?, ?)',
+      [name, email, hashPassword(password), 'user', phone || null, null]
+    );
+    const sessionUser = { id: result.insertId, name, email, role: 'user', phone: phone || null, address: null };
+    res.status(201).json({ user: sessionUser, token: createToken(sessionUser) });
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ message: 'Email sudah terdaftar' });
+    console.error('Auth register failed:', err);
+    res.status(500).json({ message: 'Gagal registrasi ke server auth', code: err.code, error: err.message });
+  }
 });
 
-app.post('/api/auth/forgot-password', (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ message: 'Email and new password are required' });
-  if (String(password).length < 6) return res.status(400).json({ message: 'Password minimal 6 karakter' });
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    await databaseReady;
 
-  db.query('SELECT * FROM auth_users WHERE email = ?', [email], (err, rows) => {
-    if (err) return res.status(500).json(err);
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ message: 'Email and new password are required' });
+    if (String(password).length < 6) return res.status(400).json({ message: 'Password minimal 6 karakter' });
+
+    const [rows] = await queryAsync('SELECT * FROM auth_users WHERE email = ?', [email]);
     if (rows.length === 0) {
       return res.status(404).json({ message: 'Email tidak ditemukan' });
     }
 
-    db.query(
+    await queryAsync(
       'UPDATE auth_users SET password_hash = ? WHERE email = ?',
-      [hashPassword(password), email],
-      (updateErr) => {
-        if (updateErr) return res.status(500).json(updateErr);
-        res.json({ success: true, message: 'Password berhasil diperbarui!' });
-      }
+      [hashPassword(password), email]
     );
-  });
+    res.json({ success: true, message: 'Password berhasil diperbarui!' });
+  } catch (err) {
+    console.error('Auth forgot password failed:', err);
+    res.status(500).json({ message: 'Gagal mereset password', code: err.code, error: err.message });
+  }
 });
 
-app.get('/api/auth/session', requireAuth, (req, res) => {
-  db.query('SELECT id, name, email, role, phone, address FROM auth_users WHERE id = ?', [req.authUser.id], (err, rows) => {
-    if (err || rows.length === 0) return res.status(401).json({ message: 'User not found' });
+app.get('/api/auth/session', requireAuth, async (req, res) => {
+  try {
+    await databaseReady;
+    const [rows] = await queryAsync('SELECT id, name, email, role, phone, address FROM auth_users WHERE id = ?', [req.authUser.id]);
+    if (rows.length === 0) return res.status(401).json({ message: 'User not found' });
     res.json({ user: rows[0] });
-  });
+  } catch (err) {
+    console.error('Auth session failed:', err);
+    res.status(500).json({ message: 'Gagal memuat sesi user', code: err.code, error: err.message });
+  }
 });
 
-app.put('/api/auth/update-profile', requireAuth, (req, res) => {
-  const { name, phone, address } = req.body;
-  const userId = req.authUser.id;
+app.put('/api/auth/update-profile', requireAuth, async (req, res) => {
+  try {
+    await databaseReady;
 
-  db.query(
-    'UPDATE auth_users SET name = ?, phone = ?, address = ? WHERE id = ?',
-    [name || req.authUser.name, phone || null, address || null, userId],
-    (err) => {
-      if (err) return res.status(500).json(err);
-      
-      db.query('SELECT id, name, email, role, phone, address FROM auth_users WHERE id = ?', [userId], (selectErr, rows) => {
-        if (selectErr || rows.length === 0) return res.status(500).json({ message: 'Error fetching updated user' });
-        
-        const updatedUser = rows[0];
-        res.json({
-          success: true,
-          user: updatedUser,
-          token: createToken(updatedUser)
-        });
-      });
-    }
-  );
+    const { name, phone, address } = req.body;
+    const userId = req.authUser.id;
+
+    await queryAsync(
+      'UPDATE auth_users SET name = ?, phone = ?, address = ? WHERE id = ?',
+      [name || req.authUser.name, phone || null, address || null, userId]
+    );
+
+    const [rows] = await queryAsync('SELECT id, name, email, role, phone, address FROM auth_users WHERE id = ?', [userId]);
+    if (rows.length === 0) return res.status(500).json({ message: 'Error fetching updated user' });
+
+    const updatedUser = rows[0];
+    res.json({
+      success: true,
+      user: updatedUser,
+      token: createToken(updatedUser)
+    });
+  } catch (err) {
+    console.error('Auth update profile failed:', err);
+    res.status(500).json({ message: 'Gagal memperbarui profil', code: err.code, error: err.message });
+  }
 });
 
 app.get('/api/events/admin', (req, res) => {
