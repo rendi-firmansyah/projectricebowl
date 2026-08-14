@@ -62,6 +62,9 @@ const app = express();
 const port = Number(process.env.PORT || 5000);
 const uploadDir = path.join(__dirname, 'uploads');
 const AUTH_SECRET = requireProductionEnv('AUTH_SECRET', 'change-this-local-dev-secret');
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || '';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
+const ADMIN_NAME = process.env.ADMIN_NAME || 'Admin Couple Bowl';
 const TOKEN_MAX_AGE_MS = 1000 * 60 * 60 * 12;
 const adminEventClients = new Set();
 const clientOrigins = (requireProductionEnv('CLIENT_URL', '') || '')
@@ -566,10 +569,12 @@ const ensureAuthUsers = async () => {
   try {
     await queryAsync(createTable);
 
-    const defaults = [
-      { name: 'Admin Couple Bowl', email: 'admin@couplebowl.com', password: 'admin', role: 'admin' },
-      { name: 'Alex Thompson', email: 'alex.t@email.com', password: 'user123', role: 'user' }
-    ];
+    const defaults = isProduction
+      ? []
+      : [
+          { name: 'Admin Couple Bowl', email: 'admin@couplebowl.com', password: 'admin', role: 'admin' },
+          { name: 'Alex Thompson', email: 'alex.t@email.com', password: 'user123', role: 'user' }
+        ];
 
     for (const user of defaults) {
       const [rows] = await queryAsync('SELECT id FROM auth_users WHERE email = ?', [user.email]);
@@ -579,6 +584,23 @@ const ensureAuthUsers = async () => {
           [user.name, user.email, hashPassword(user.password), user.role]
         );
       }
+    }
+
+    if (ADMIN_EMAIL && ADMIN_PASSWORD) {
+      const [rows] = await queryAsync('SELECT id FROM auth_users WHERE email = ?', [ADMIN_EMAIL]);
+      if (rows.length === 0) {
+        await queryAsync(
+          'INSERT INTO auth_users (name, email, password_hash, role) VALUES (?, ?, ?, ?)',
+          [ADMIN_NAME, ADMIN_EMAIL, hashPassword(ADMIN_PASSWORD), 'admin']
+        );
+      } else {
+        await queryAsync(
+          'UPDATE auth_users SET name = ?, password_hash = ?, role = ? WHERE email = ?',
+          [ADMIN_NAME, hashPassword(ADMIN_PASSWORD), 'admin', ADMIN_EMAIL]
+        );
+      }
+    } else if (isProduction) {
+      console.warn('ADMIN_EMAIL and ADMIN_PASSWORD are not set; admin account was not bootstrapped.');
     }
   } catch (err) {
     console.error('Failed creating or seeding auth_users:', err.message);
@@ -606,8 +628,18 @@ const databaseReady = bootstrapDatabase();
 app.get('/api/auth-health', async (req, res) => {
   try {
     await databaseReady;
-    const [rows] = await queryAsync('SELECT COUNT(*) AS total FROM auth_users');
-    res.json({ status: 'ok', authUsers: rows[0]?.total || 0 });
+    const [rows] = await queryAsync(`
+      SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN role = 'admin' THEN 1 ELSE 0 END) AS admins
+      FROM auth_users
+    `);
+    res.json({
+      status: 'ok',
+      authUsers: rows[0]?.total || 0,
+      adminUsers: Number(rows[0]?.admins || 0),
+      adminBootstrapConfigured: Boolean(ADMIN_EMAIL && ADMIN_PASSWORD)
+    });
   } catch (err) {
     console.error('Auth health check failed:', err);
     res.status(500).json({ status: 'error', message: 'Auth table check failed', code: err.code, error: err.message });
