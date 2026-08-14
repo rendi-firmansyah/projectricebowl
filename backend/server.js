@@ -233,13 +233,46 @@ const dbConfig = {
   database: requireAnyProductionEnv('Database name', ['DB_NAME', 'MYSQLDATABASE'], 'rendiweb_db')
 };
 
+const normalizeCertificate = (value) => {
+  if (!value) return undefined;
+  return value.replace(/\\n/g, '\n');
+};
+
+const readSslCa = () => {
+  const plainCa = envValue('DB_SSL_CA', 'MYSQL_SSL_CA', 'AIVEN_CA_CERT');
+  if (plainCa) return normalizeCertificate(plainCa);
+
+  const base64Ca = envValue('DB_SSL_CA_BASE64', 'MYSQL_SSL_CA_BASE64', 'AIVEN_CA_CERT_BASE64');
+  if (!base64Ca) return undefined;
+
+  try {
+    return Buffer.from(base64Ca, 'base64').toString('utf8');
+  } catch (err) {
+    console.warn('Could not decode DB SSL CA certificate:', err.message);
+    return undefined;
+  }
+};
+
+const createSslOptions = () => {
+  if (process.env.DB_SSL !== 'true') return undefined;
+
+  const ssl = {
+    rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false'
+  };
+  const ca = readSslCa();
+  if (ca) ssl.ca = ca;
+
+  return ssl;
+};
+
+const sslOptions = createSslOptions();
 const db = mysql.createPool({
   host: dbConfig.host,
   port: dbConfig.port,
   user: dbConfig.user,
   password: dbConfig.password,
   database: dbConfig.database,
-  ...(process.env.DB_SSL === 'true' ? { ssl: { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' } } : {}),
+  ...(sslOptions ? { ssl: sslOptions } : {}),
   waitForConnections: true,
   connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 10),
   queueLimit: 0
@@ -252,6 +285,27 @@ db.getConnection((err, connection) => {
 });
 
 const queryAsync = (sql, values = []) => db.promise().query(sql, values);
+
+app.get('/api/db-health', async (req, res) => {
+  try {
+    const [rows] = await queryAsync('SELECT 1 AS ok');
+    res.json({
+      status: 'ok',
+      database: dbConfig.database,
+      ssl: process.env.DB_SSL === 'true',
+      verifiedTls: process.env.DB_SSL === 'true' && process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
+      result: rows[0]
+    });
+  } catch (err) {
+    console.error('Database health check failed:', err);
+    res.status(500).json({
+      status: 'error',
+      message: 'Database connection failed',
+      code: err.code,
+      error: err.message
+    });
+  }
+});
 
 const ensureCoreTables = async () => {
   await queryAsync(`
@@ -665,7 +719,6 @@ app.get('/api/events/admin', (req, res) => {
 // Categories
 app.get('/api/categories', async (req, res) => {
   try {
-    await databaseReady;
     const [results] = await queryAsync('SELECT * FROM categories ORDER BY name ASC');
     res.json(results);
   } catch (err) {
@@ -700,7 +753,6 @@ app.delete('/api/categories/:id', requireAdmin, (req, res) => {
 // Menu Items
 app.get('/api/menu', async (req, res) => {
   try {
-    await databaseReady;
     const [results] = await queryAsync('SELECT * FROM menu_items ORDER BY id ASC');
     const formatted = results.map(item => ({
       ...item,
