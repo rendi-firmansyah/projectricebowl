@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Upload, CheckCircle, X, Image as ImageIcon, Link as LinkIcon } from 'lucide-react'
+import { Upload, CheckCircle, X, Image as ImageIcon, Link as LinkIcon, AlertCircle } from 'lucide-react'
 
 const cs = {
   card: { background:'#fff', border:'1px solid #e2e8f0', borderRadius:16, overflow:'hidden' },
@@ -19,7 +19,14 @@ const cs = {
   previewEmpty: { display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:10, color:'#94a3b8', textAlign:'center', padding:22 },
   uploadHint: { fontSize:12, color:'#64748b', lineHeight:1.45, marginTop:8 },
   fileButton: { display:'inline-flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', padding:'12px 16px', borderRadius:12, border:'1px solid #dc2626', background:'#dc2626', color:'#fff', fontSize:14, fontWeight:800, cursor:'pointer' },
-  clearImageBtn: { display:'inline-flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', padding:'11px 16px', borderRadius:12, border:'1px solid #fecaca', background:'#fff', color:'#dc2626', fontSize:13, fontWeight:800, cursor:'pointer' }
+  clearImageBtn: { display:'inline-flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', padding:'11px 16px', borderRadius:12, border:'1px solid #fecaca', background:'#fff', color:'#dc2626', fontSize:13, fontWeight:800, cursor:'pointer' },
+  feedbackOverlay: { position:'fixed', inset:0, zIndex:10000, background:'rgba(15,23,42,0.62)', display:'flex', alignItems:'center', justifyContent:'center', padding:20, backdropFilter:'blur(4px)' },
+  feedbackModal: { width:'min(420px, 100%)', background:'#fff', borderRadius:20, overflow:'hidden', boxShadow:'0 30px 80px rgba(15,23,42,0.35)', border:'1px solid #fee2e2' },
+  feedbackHeader: { padding:'22px 22px 16px', background:'linear-gradient(135deg, #fff7f7 0%, #ffffff 72%)', borderBottom:'1px solid #fee2e2', display:'flex', alignItems:'flex-start', gap:14 },
+  feedbackIcon: (type) => ({ width:44, height:44, borderRadius:14, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', background:type === 'success' ? '#16a34a' : '#dc2626', boxShadow:type === 'success' ? '0 12px 24px rgba(22,163,74,0.22)' : '0 12px 24px rgba(220,38,38,0.22)' }),
+  feedbackTitle: { fontSize:18, fontWeight:900, color:'#0f172a', marginBottom:5 },
+  feedbackText: { fontSize:14, color:'#64748b', lineHeight:1.5 },
+  feedbackFooter: { padding:18, display:'flex', justifyContent:'flex-end', gap:10, background:'#fff' }
 }
 
 const getImageSourceLabel = (imageUrl) => {
@@ -43,6 +50,7 @@ export default function MenuFormView({ editItem, onSaveSuccess, onCancel }) {
   const [isPopular, setIsPopular] = useState(false)
   const [isNew, setIsNew] = useState(false)
   const [status, setStatus] = useState('Tersedia')
+  const [feedback, setFeedback] = useState(null)
 
   // Fetch categories from DB
   useEffect(() => {
@@ -127,14 +135,30 @@ export default function MenuFormView({ editItem, onSaveSuccess, onCancel }) {
       })
       .then(() => {
         setLoading(false)
-        alert(editItem ? 'Menu berhasil diperbarui!' : 'Menu berhasil ditambahkan!')
-        if (onSaveSuccess) onSaveSuccess()
+        setFeedback({
+          type: 'success',
+          title: editItem ? 'Menu berhasil diperbarui' : 'Menu berhasil ditambahkan',
+          message: editItem
+            ? 'Perubahan data menu dan foto sudah tersimpan ke database.'
+            : 'Menu baru sudah tersimpan dan siap tampil pada halaman menu.',
+          onClose: onSaveSuccess
+        })
       })
       .catch(err => {
         console.error(err)
         setLoading(false)
-        alert(err.message || 'Gagal menyimpan menu.')
+        setFeedback({
+          type: 'error',
+          title: 'Gagal menyimpan menu',
+          message: err.message || 'Terjadi kesalahan saat menyimpan menu. Silakan coba lagi.'
+        })
       })
+  }
+
+  const closeFeedback = () => {
+    const nextAction = feedback?.onClose
+    setFeedback(null)
+    if (nextAction) nextAction()
   }
 
   return (
@@ -253,6 +277,34 @@ export default function MenuFormView({ editItem, onSaveSuccess, onCancel }) {
           </button>
         </div>
       </form>
+
+      {feedback && (
+        <div style={cs.feedbackOverlay} onClick={closeFeedback}>
+          <div style={cs.feedbackModal} onClick={e => e.stopPropagation()}>
+            <div style={cs.feedbackHeader}>
+              <div style={cs.feedbackIcon(feedback.type)}>
+                {feedback.type === 'success' ? <CheckCircle size={24}/> : <AlertCircle size={24}/>}
+              </div>
+              <div style={{flex:1}}>
+                <div style={cs.feedbackTitle}>{feedback.title}</div>
+                <div style={cs.feedbackText}>{feedback.message}</div>
+              </div>
+              <button type="button" onClick={closeFeedback} style={{border:'none',background:'transparent',cursor:'pointer',color:'#94a3b8',padding:4}}>
+                <X size={18}/>
+              </button>
+            </div>
+            <div style={cs.feedbackFooter}>
+              <button
+                type="button"
+                onClick={closeFeedback}
+                style={cs.btn(feedback.type === 'success' ? '#dc2626' : '#fff', feedback.type === 'success' ? '#fff' : '#475569')}
+              >
+                {feedback.type === 'success' ? 'Lihat Daftar Menu' : 'Tutup'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
