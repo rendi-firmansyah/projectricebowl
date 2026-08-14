@@ -295,20 +295,34 @@ const riceRequestOptions = [
 
 const riceChangeIntentPattern = /\b(?:ganti|diganti|gantinya|gantiin|digantiin|pake|pakai|pakek|gunakan|ubah|rubah)\b/
 
-const getRequestedRiceOption = (input) => {
-  const normalized = normalizeText(input)
-  if (!riceChangeIntentPattern.test(normalized)) return ''
+const riceOptionAliasLookup = riceRequestOptions
+  .flatMap(entry => entry.aliases.map(alias => ({
+    alias: normalizeText(alias),
+    option: entry.option,
+  })))
+  .sort((a, b) => b.alias.length - a.alias.length)
 
+const riceOptionAliasPattern = riceOptionAliasLookup
+  .map(entry => escapeRegex(entry.alias))
+  .join('|')
+
+const getMentionedRiceOption = (input) => {
+  const normalized = normalizeText(input)
   const hasRiceWord = /\bnasi\b/.test(normalized)
-  for (const entry of riceRequestOptions) {
-    const found = entry.aliases.some(alias => {
-      const normalizedAlias = normalizeText(alias)
-      return new RegExp(`(^|\\s)${escapeRegex(normalizedAlias)}(?=\\s|$)`).test(normalized)
-    })
+
+  for (const entry of riceOptionAliasLookup) {
+    const found = new RegExp(`(^|\\s)${escapeRegex(entry.alias)}(?=\\s|$)`).test(normalized)
     if (found && (hasRiceWord || entry.option === 'Nasi Uduk')) return entry.option
   }
 
   return ''
+}
+
+const getRequestedRiceOption = (input) => {
+  const normalized = normalizeText(input)
+  if (!riceChangeIntentPattern.test(normalized)) return ''
+
+  return getMentionedRiceOption(input)
 }
 
 const hasRiceReplacementRequest = (input) => Boolean(getRequestedRiceOption(input))
@@ -346,6 +360,11 @@ const shouldSkipSmartMatch = (input, item) => {
   }
 
   return false
+}
+
+const isRiceMenuItem = (item) => {
+  const itemName = normalizeText(item?.name || '')
+  return item?.category === 'nasi' || item?.category_id === 'nasi' || itemName.includes('nasi ')
 }
 
 const splitOrderSegments = (input) =>
@@ -386,6 +405,50 @@ const getPositionedItems = (normalizedInput, items) =>
     .map(item => ({ ...item, smartPosition: findItemPosition(normalizedInput, item) }))
     .sort((a, b) => a.smartPosition.index - b.smartPosition.index)
 
+const extractQuantityCustomizationGroups = (input) => {
+  const normalized = normalizeText(input)
+  if (!riceOptionAliasPattern) return []
+
+  const groups = []
+  const seenRanges = new Set()
+  const spicePattern = `((?:tidak|ga|gak|nggak|enggak)\\s+pedas|pedas)`
+  const quantitySpiceRicePattern = new RegExp(
+    `(?:^|\\s)(${quantityPattern})\\s*(?:x|pcs|porsi)?\\s+${spicePattern}\\s+(?:pake|pakai|pakek|diganti|ganti|dengan)?\\s*(${riceOptionAliasPattern})(?=\\s|$)`,
+    'g'
+  )
+  const quantityRiceSpicePattern = new RegExp(
+    `(?:^|\\s)(${quantityPattern})\\s*(?:x|pcs|porsi)?\\s+(?:pake|pakai|pakek|diganti|ganti|dengan)?\\s*(${riceOptionAliasPattern})\\s+${spicePattern}(?=\\s|$)`,
+    'g'
+  )
+
+  const addGroup = (match, riceAlias, spiceText) => {
+    const rangeKey = `${match.index}:${match[0].length}`
+    if (seenRanges.has(rangeKey)) return
+    seenRanges.add(rangeKey)
+
+    const riceOption = riceOptionAliasLookup.find(entry => entry.alias === normalizeText(riceAlias))?.option || ''
+    if (!riceOption) return
+
+    groups.push({
+      quantity: parseQuantityValue(match[1]),
+      rice: riceOption,
+      spice: /\b(tidak|ga|gak|nggak|enggak)\s+pedas\b/.test(normalizeText(spiceText)) ? 'Tidak Pedas' : 'Pedas',
+      start: match.index,
+      end: match.index + match[0].length,
+    })
+  }
+
+  for (const match of normalized.matchAll(quantitySpiceRicePattern)) {
+    addGroup(match, match[3], match[2])
+  }
+
+  for (const match of normalized.matchAll(quantityRiceSpicePattern)) {
+    addGroup(match, match[2], match[3])
+  }
+
+  return groups.sort((a, b) => a.start - b.start)
+}
+
 const parseSpiceQuantitySplit = (input, list, parseMessageForItems) => {
   const normalized = normalizeText(input)
   const baseItems = parseMessageForItems(input, list)
@@ -395,9 +458,12 @@ const parseSpiceQuantitySplit = (input, list, parseMessageForItems) => {
   const positionedItems = getPositionedItems(normalized, baseItems)
   const items = []
   let hasLocalSpiceInstruction = false
+  const consumedRiceRanges = []
 
   positionedItems.forEach((item, index) => {
-    const nextItem = positionedItems[index + 1]
+    const nextItem = isCustomizableBowl(item)
+      ? positionedItems.slice(index + 1).find(candidate => !isRiceMenuItem(candidate))
+      : positionedItems[index + 1]
     const start = item.smartPosition.index === Number.MAX_SAFE_INTEGER ? 0 : item.smartPosition.index
     const end = nextItem?.smartPosition.index && nextItem.smartPosition.index !== Number.MAX_SAFE_INTEGER
       ? nextItem.smartPosition.index
@@ -406,11 +472,51 @@ const parseSpiceQuantitySplit = (input, list, parseMessageForItems) => {
     const localCustomization = extractCustomization(localText, item)
 
     if (!isCustomizableBowl(item)) {
+      const isRiceItem = isRiceMenuItem(item)
+      const itemPosition = item.smartPosition.index
+      const isConsumedAsRiceOption = isRiceItem && consumedRiceRanges.some(range => (
+        itemPosition >= range.start && itemPosition <= range.end
+      ))
+
+      if (isConsumedAsRiceOption) return
+
       items.push({
         ...item,
         note: '',
         customization: getEmptyCustomization(item),
       })
+      return
+    }
+
+    const customizationGroups = extractQuantityCustomizationGroups(localText)
+    if (customizationGroups.length > 0) {
+      hasLocalSpiceInstruction = true
+      let groupedQty = 0
+
+      customizationGroups.forEach(group => {
+        groupedQty += group.quantity
+        consumedRiceRanges.push({
+          start: start + group.start,
+          end: start + group.end,
+        })
+        items.push({
+          ...item,
+          quantity: group.quantity,
+          customization: { ...getEmptyCustomization(item), rice: group.rice, spice: group.spice },
+          note: '',
+        })
+      })
+
+      const remainingQty = Math.max(0, Number(item.quantity || 0) - groupedQty)
+      if (remainingQty > 0) {
+        items.push({
+          ...item,
+          quantity: remainingQty,
+          customization: getEmptyCustomization(item),
+          note: '',
+        })
+      }
+
       return
     }
 
