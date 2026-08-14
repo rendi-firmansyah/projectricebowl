@@ -23,7 +23,17 @@ export default function MenuPage() {
 
   useEffect(() => {
     getMenuItems().then(data => setMenuList(data))
-    fetch('/api/categories').then(r=>r.json()).then(data => setCategories(data)).catch(console.error)
+    fetch('/api/categories')
+      .then(async r => {
+        const data = await r.json().catch(() => [])
+        if (!r.ok || !Array.isArray(data)) return []
+        return data
+      })
+      .then(data => setCategories(data))
+      .catch(error => {
+        console.error('Error fetching categories:', error)
+        setCategories([])
+      })
   }, [])
 
   useEffect(() => {

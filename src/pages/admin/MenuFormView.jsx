@@ -30,14 +30,21 @@ export default function MenuFormView({ editItem, onSaveSuccess, onCancel }) {
   // Fetch categories from DB
   useEffect(() => {
     fetch('/api/categories')
-      .then(r => r.json())
+      .then(async r => {
+        const data = await r.json().catch(() => [])
+        if (!r.ok || !Array.isArray(data)) return []
+        return data
+      })
       .then(data => {
         setCategories(data)
         if (data.length > 0 && !editItem) {
           setCategoryId(data[0].id)
         }
       })
-      .catch(console.error)
+      .catch(error => {
+        console.error('Error fetching categories:', error)
+        setCategories([])
+      })
   }, [editItem])
 
   // Populate data in edit mode

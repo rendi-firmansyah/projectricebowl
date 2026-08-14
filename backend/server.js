@@ -663,11 +663,15 @@ app.get('/api/events/admin', (req, res) => {
 });
 
 // Categories
-app.get('/api/categories', (req, res) => {
-  db.query('SELECT * FROM categories', (err, results) => {
-    if (err) return res.status(500).json(err);
+app.get('/api/categories', async (req, res) => {
+  try {
+    await databaseReady;
+    const [results] = await queryAsync('SELECT * FROM categories ORDER BY name ASC');
     res.json(results);
-  });
+  } catch (err) {
+    console.error('Error fetching categories:', err);
+    res.status(500).json({ message: 'Gagal memuat kategori menu', error: err.message });
+  }
 });
 
 app.post('/api/categories', requireAdmin, (req, res) => {
