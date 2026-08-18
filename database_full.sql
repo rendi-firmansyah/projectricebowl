@@ -119,16 +119,26 @@ CREATE TABLE IF NOT EXISTS settings (
     setting_value TEXT
 );
 
-TRUNCATE TABLE order_items;
-TRUNCATE TABLE payments;
-TRUNCATE TABLE orders;
-TRUNCATE TABLE customers;
-TRUNCATE TABLE auth_users;
-TRUNCATE TABLE promos;
-TRUNCATE TABLE gallery;
-TRUNCATE TABLE testimonials;
-TRUNCATE TABLE menu_items;
+DELETE FROM order_items;
+DELETE FROM payments;
+DELETE FROM orders;
+DELETE FROM customers;
+DELETE FROM auth_users;
+DELETE FROM promos;
+DELETE FROM gallery;
+DELETE FROM testimonials;
+DELETE FROM menu_items;
 DELETE FROM categories;
+
+ALTER TABLE order_items AUTO_INCREMENT = 1;
+ALTER TABLE payments AUTO_INCREMENT = 1;
+ALTER TABLE orders AUTO_INCREMENT = 1;
+ALTER TABLE customers AUTO_INCREMENT = 1;
+ALTER TABLE auth_users AUTO_INCREMENT = 1;
+ALTER TABLE promos AUTO_INCREMENT = 1;
+ALTER TABLE gallery AUTO_INCREMENT = 1;
+ALTER TABLE testimonials AUTO_INCREMENT = 1;
+ALTER TABLE menu_items AUTO_INCREMENT = 1;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
