@@ -1303,7 +1303,7 @@ export default function SmartOrderPage() {
                   handleSend(text)
                 }
               }}
-              placeholder={'Ketik pesanan atau paste list kantor di sini...\nContoh:\nexa - ayam suwir nasi bom merah\nristek - salted egg nasi daun jeruk'}
+              placeholder="Ketik pesanan"
               style={{
                 flex: 1,
                 padding: '12px 16px',
