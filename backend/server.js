@@ -778,12 +778,21 @@ app.get('/api/events/admin', (req, res) => {
 // Categories
 app.get('/api/categories', async (req, res) => {
   try {
-    await databaseReady;
-    const [results] = await queryAsync('SELECT * FROM categories ORDER BY name ASC');
+    let [results] = await queryAsync('SELECT * FROM categories ORDER BY name ASC');
+    if (results.length === 0) {
+      await databaseReady;
+      [results] = await queryAsync('SELECT * FROM categories ORDER BY name ASC');
+    }
     res.json(results);
   } catch (err) {
-    console.error('Error fetching categories:', err);
-    res.status(500).json({ message: 'Gagal memuat kategori menu', error: err.message });
+    try {
+      await databaseReady;
+      const [results] = await queryAsync('SELECT * FROM categories ORDER BY name ASC');
+      return res.json(results);
+    } catch (retryErr) {
+      console.error('Error fetching categories:', retryErr);
+      res.status(500).json({ message: 'Gagal memuat kategori menu', error: retryErr.message });
+    }
   }
 });
 
@@ -813,8 +822,11 @@ app.delete('/api/categories/:id', requireAdmin, (req, res) => {
 // Menu Items
 app.get('/api/menu', async (req, res) => {
   try {
-    await databaseReady;
-    const [results] = await queryAsync('SELECT * FROM menu_items ORDER BY id ASC');
+    let [results] = await queryAsync('SELECT * FROM menu_items ORDER BY id ASC');
+    if (results.length === 0) {
+      await databaseReady;
+      [results] = await queryAsync('SELECT * FROM menu_items ORDER BY id ASC');
+    }
     const formatted = results.map(item => ({
       ...item,
       isPopular: item.is_popular === 1,
@@ -823,8 +835,20 @@ app.get('/api/menu', async (req, res) => {
     }));
     res.json(formatted);
   } catch (err) {
-    console.error('Error fetching menu:', err);
-    res.status(500).json({ message: 'Gagal memuat daftar menu', error: err.message });
+    try {
+      await databaseReady;
+      const [results] = await queryAsync('SELECT * FROM menu_items ORDER BY id ASC');
+      const formatted = results.map(item => ({
+        ...item,
+        isPopular: item.is_popular === 1,
+        isNew: item.is_new === 1,
+        tags: item.tags ? item.tags.split(',') : []
+      }));
+      return res.json(formatted);
+    } catch (retryErr) {
+      console.error('Error fetching menu:', retryErr);
+      res.status(500).json({ message: 'Gagal memuat daftar menu', error: retryErr.message });
+    }
   }
 });
 
