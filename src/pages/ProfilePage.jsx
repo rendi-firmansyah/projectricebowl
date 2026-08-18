@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronRight, Settings, Bell, HelpCircle, LogOut, Package, Heart, MapPin, CreditCard, Eye, ReceiptText, Trash2, ArrowLeft } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { formatPrice, getMenuItems, optimizeImageUrl } from '../data/menuData'
+import { formatPrice, getCachedMenuItems, getMenuItems, optimizeImageUrl } from '../data/menuData'
 import { readFavoriteIds, saveFavoriteIds } from '../lib/favorites'
 
 const menuLinks = [
@@ -33,7 +33,7 @@ export default function ProfilePage() {
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [activePanel, setActivePanel] = useState('menu')
   const [favoriteIds, setFavoriteIds] = useState([])
-  const [menuList, setMenuList] = useState([])
+  const [menuList, setMenuList] = useState(() => getCachedMenuItems())
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
 
   const [address, setAddress] = useState('')

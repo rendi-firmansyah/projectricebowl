@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Send, Sparkles, ShoppingCart, ChevronLeft, Zap, Trash2, ArrowRight, AlertCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { getMenuItems, formatPrice, optimizeImageUrl } from '../data/menuData'
+import { getCachedMenuItems, getMenuItems, formatPrice, optimizeImageUrl } from '../data/menuData'
 import { useCart } from '../context/CartContext'
 import { defaultRiceOption, getEmptyCustomization, isCustomizableBowl } from '../data/orderOptions'
 
@@ -786,7 +786,7 @@ const isMenuUnavailable = (item) => String(item?.status || 'Tersedia').toLowerCa
 
 export default function SmartOrderPage() {
   const [text, setText] = useState('')
-  const [menuList, setMenuList] = useState([])
+  const [menuList, setMenuList] = useState(() => getCachedMenuItems())
   const [currentOrder, setCurrentOrder] = useState([])
   const [isTyping, setIsTyping] = useState(false)
   const [isCompact, setIsCompact] = useState(() => window.innerWidth < 900)

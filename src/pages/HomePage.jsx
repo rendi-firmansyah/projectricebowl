@@ -4,7 +4,7 @@ import {
   ChevronRight, Star, Clock, Flame, Sparkles,
   ArrowRight, Truck, CreditCard, Search, Zap, Users, Award
 } from 'lucide-react'
-import { getMenuItems, formatPrice, optimizeImageUrl } from '../data/menuData'
+import { getCachedMenuItems, getMenuItems, formatPrice, optimizeImageUrl } from '../data/menuData'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import AddOnModal from '../components/AddOnModal'
@@ -36,7 +36,7 @@ export default function HomePage() {
   const { user } = useAuth()
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
-  const [menuList, setMenuList] = useState([])
+  const [menuList, setMenuList] = useState(() => getCachedMenuItems())
   const [selectedAddOnItem, setSelectedAddOnItem] = useState(null)
 
   useEffect(() => {

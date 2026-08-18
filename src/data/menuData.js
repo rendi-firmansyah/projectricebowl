@@ -63,6 +63,47 @@ export const fallbackMenuImage = (label = 'Menu') => {
 
 export const cleanMenuName = (name = '') => name
 
+const MENU_CACHE_KEY = 'couple_bowl_menu_cache_v1'
+
+const normalizeMenuItem = (item = {}) => ({
+  ...item,
+  name: cleanMenuName(item.name),
+  image: optimizeImageUrl(item.image) || getMenuImageFallback(item) || fallbackMenuImage(item.name),
+  fallbackImage: item.fallbackImage || getMenuImageFallback(item),
+  originalPrice: item.originalPrice ?? item.original_price,
+  prepTime: item.prepTime ?? item.prep_time,
+  category: item.category ?? item.category_id,
+  category_id: item.category_id ?? item.category,
+  rating: parseFloat(item.rating) || 0,
+  isPopular: item.isPopular ?? item.is_popular === 1,
+  isNew: item.isNew ?? item.is_new === 1,
+  tags: Array.isArray(item.tags) ? item.tags : item.tags ? String(item.tags).split(',') : [],
+})
+
+const readCachedMenuItems = () => {
+  if (typeof window === 'undefined') return []
+
+  try {
+    const cached = JSON.parse(window.localStorage.getItem(MENU_CACHE_KEY) || '{}')
+    return Array.isArray(cached.items) ? cached.items.map(normalizeMenuItem) : []
+  } catch {
+    return []
+  }
+}
+
+const writeCachedMenuItems = (items) => {
+  if (typeof window === 'undefined' || !Array.isArray(items) || items.length === 0) return
+
+  try {
+    window.localStorage.setItem(MENU_CACHE_KEY, JSON.stringify({
+      savedAt: Date.now(),
+      items,
+    }))
+  } catch {
+    // localStorage can fail in private mode; the static fallback still keeps the UI usable.
+  }
+}
+
 export const menuItems = [
   // RICE BOWLS (Chicken & Meat toppings)
   {
@@ -366,21 +407,21 @@ export const getMenuItems = async () => {
     const response = await fetch('/api/menu')
     if (!response.ok) throw new Error('Failed to fetch menu')
     const data = await response.json()
-    // Map snake_case fields from API to camelCase for frontend
-    return data.map(item => ({
-      ...item,
-      name: cleanMenuName(item.name),
-      image: optimizeImageUrl(item.image) || getMenuImageFallback(item) || fallbackMenuImage(item.name),
-      fallbackImage: getMenuImageFallback(item),
-      originalPrice: item.original_price,
-      prepTime: item.prep_time,
-      category: item.category_id,
-      rating: parseFloat(item.rating) || 0,
-    }))
+    const formatted = Array.isArray(data) ? data.map(normalizeMenuItem) : []
+    if (formatted.length > 0) {
+      writeCachedMenuItems(formatted)
+      return formatted
+    }
+    return getCachedMenuItems()
   } catch (error) {
     console.error('Error fetching menu items:', error)
-    return menuItems // fallback to local data if API fails
+    return getCachedMenuItems()
   }
+}
+
+export const getCachedMenuItems = () => {
+  const cachedItems = readCachedMenuItems()
+  return cachedItems.length > 0 ? cachedItems : menuItems.map(normalizeMenuItem)
 }
 
 export const saveMenuItems = async (items) => {

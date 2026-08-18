@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Search, Star, Clock, Plus, Sparkles, Filter, Grid3X3, List, Heart } from 'lucide-react'
-import { getMenuItems, formatPrice, optimizeImageUrl } from '../data/menuData'
+import { categories as defaultCategories, getCachedMenuItems, getMenuItems, formatPrice, optimizeImageUrl } from '../data/menuData'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { readFavoriteIds, toggleFavoriteId } from '../lib/favorites'
 import AddOnModal from '../components/AddOnModal'
 
 const isMenuSoldOut = (item) => String(item?.status || 'Tersedia').toLowerCase() === 'habis'
+const defaultMenuCategories = defaultCategories.filter(category => category.id !== 'all')
 
 export default function MenuPage() {
   const [activeCategory, setActiveCategory] = useState('all')
@@ -14,8 +15,8 @@ export default function MenuPage() {
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   const [viewMode, setViewMode] = useState('grid')
-  const [menuList, setMenuList] = useState([])
-  const [categories, setCategories] = useState([])
+  const [menuList, setMenuList] = useState(() => getCachedMenuItems())
+  const [categories, setCategories] = useState(defaultMenuCategories)
   const [selectedAddOnItem, setSelectedAddOnItem] = useState(null)
   const [favoriteIds, setFavoriteIds] = useState([])
   const { addItem } = useCart()
@@ -29,10 +30,10 @@ export default function MenuPage() {
         if (!r.ok || !Array.isArray(data)) return []
         return data
       })
-      .then(data => setCategories(data))
+      .then(data => setCategories(data.length > 0 ? data : defaultMenuCategories))
       .catch(error => {
         console.error('Error fetching categories:', error)
-        setCategories([])
+        setCategories(defaultMenuCategories)
       })
   }, [])
 
