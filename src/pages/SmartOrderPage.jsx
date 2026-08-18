@@ -328,12 +328,14 @@ const getRequestedRiceOption = (input) => {
 
 const hasRiceReplacementRequest = (input) => Boolean(getRequestedRiceOption(input))
 
-const extractCustomization = (input, item) => {
+const extractCustomization = (input, item, options = {}) => {
   const customization = getEmptyCustomization(item)
   if (!isCustomizableBowl(item)) return customization
 
   const normalized = normalizeText(input)
-  const requestedRice = getRequestedRiceOption(input)
+  const requestedRice = getRequestedRiceOption(input) || (
+    options.allowDirectRiceMention ? getMentionedRiceOption(input) : ''
+  )
   if (requestedRice) {
     customization.rice = requestedRice
   }
@@ -460,7 +462,7 @@ const extractQuantityCustomizationGroups = (input) => {
   return groups.sort((a, b) => a.start - b.start)
 }
 
-const parseSpiceQuantitySplit = (input, list, parseMessageForItems) => {
+const parseSpiceQuantitySplit = (input, list, parseMessageForItems, options = {}) => {
   const normalized = normalizeText(input)
   const baseItems = parseMessageForItems(input, list)
 
@@ -480,16 +482,21 @@ const parseSpiceQuantitySplit = (input, list, parseMessageForItems) => {
       ? nextItem.smartPosition.index
       : normalized.length
     const localText = normalized.slice(start, end)
-    const localCustomization = extractCustomization(localText, item)
+    const localCustomization = extractCustomization(localText, item, {
+      allowDirectRiceMention: options.allowDirectRiceMention === true,
+    })
 
     if (!isCustomizableBowl(item)) {
       const isRiceItem = isRiceMenuItem(item)
       const itemPosition = item.smartPosition.index
+      const isDirectRiceOption = options.allowDirectRiceMention === true
+        && isRiceItem
+        && positionedItems.some(candidate => isCustomizableBowl(candidate))
       const isConsumedAsRiceOption = isRiceItem && consumedRiceRanges.some(range => (
         itemPosition >= range.start && itemPosition <= range.end
       ))
 
-      if (isConsumedAsRiceOption) return
+      if (isDirectRiceOption || isConsumedAsRiceOption) return
 
       items.push({
         ...item,
@@ -586,37 +593,42 @@ const parseSpiceQuantitySplit = (input, list, parseMessageForItems) => {
   return hasLocalSpiceInstruction ? items : []
 }
 
-const parseSegmentsForItems = (input, list, parseMessageForItems) => {
-  const splitBySpice = parseSpiceQuantitySplit(input, list, parseMessageForItems)
-  if (splitBySpice.length > 0) return splitBySpice
-
-  const segments = splitOrderSegments(input)
-  if (segments.length <= 1) {
-    const parsedItems = parseMessageForItems(input, list)
-    const customBowlCount = parsedItems.filter(item => isCustomizableBowl(item)).length
-
-    return parsedItems.map(item => ({
+const parseSingleOrderText = (input, list, parseMessageForItems, options = {}) => {
+  const splitBySpice = parseSpiceQuantitySplit(input, list, parseMessageForItems, {
+    allowDirectRiceMention: options.allowDirectRiceMention === true,
+  })
+  if (splitBySpice.length > 0) {
+    return splitBySpice.map(item => ({
       ...item,
-      note: extractItemNote(input),
-      customization: customBowlCount <= 1 ? extractCustomization(input, item) : getEmptyCustomization(item),
+      note: options.note || item.note || '',
     }))
   }
 
+  const segments = splitOrderSegments(input)
+  const shouldReadRiceAsBowlOption = options.allowDirectRiceMention === true
   const parsed = []
   const usedKeys = new Set()
 
-  segments.forEach(segment => {
+  const sourceSegments = segments.length > 1 ? segments : [input]
+  sourceSegments.forEach(segment => {
     const segmentItems = parseMessageForItems(segment, list)
-    const segmentNote = extractItemNote(segment)
+    const customBowlCount = segmentItems.filter(item => isCustomizableBowl(item)).length
+    const hasRiceOption = Boolean(getMentionedRiceOption(segment))
+    const segmentNote = options.note || extractItemNote(segment)
 
     segmentItems.forEach(item => {
-      const customization = extractCustomization(segment, item)
+      if (shouldReadRiceAsBowlOption && customBowlCount > 0 && hasRiceOption && isRiceMenuItem(item)) return
+
+      const customization = customBowlCount <= 1
+        ? extractCustomization(segment, item, { allowDirectRiceMention: shouldReadRiceAsBowlOption })
+        : getEmptyCustomization(item)
       const key = [
         item.id,
         customization.rice || '',
         customization.spice || '',
         segmentNote,
       ].join('::')
+
       if (usedKeys.has(key)) {
         const existing = parsed.find(parsedItem => {
           const parsedKey = [
@@ -640,13 +652,59 @@ const parseSegmentsForItems = (input, list, parseMessageForItems) => {
     })
   })
 
-  if (parsed.length > 0) return parsed
+  return parsed
+}
 
-  return parseMessageForItems(input, list).map(item => ({
-    ...item,
-    note: extractItemNote(input),
-    customization: extractCustomization(input, item),
-  }))
+const parseNamedOrderLine = (line) => {
+  const match = line.match(/^\s*([A-Za-zÀ-ÿ0-9 ._]{2,40}?)\s*(?:-|:|–|—)\s*(.+)$/)
+  if (!match) return null
+
+  const customerName = match[1].trim()
+  const orderText = match[2].trim()
+  const normalizedName = normalizeText(customerName)
+
+  if (!customerName || !orderText) return null
+  if (/\d/.test(normalizedName)) return null
+  if (['pesan', 'order', 'tambah', 'mau', 'saya'].some(word => normalizedName.includes(word))) return null
+
+  return { customerName, orderText }
+}
+
+const parseStructuredOrderList = (input, list, parseMessageForItems) => {
+  const lines = input
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean)
+
+  if (lines.length === 1) {
+    const row = parseNamedOrderLine(lines[0])
+    if (!row) return []
+
+    return parseSingleOrderText(row.orderText, list, parseMessageForItems, {
+      allowDirectRiceMention: true,
+      note: `Untuk: ${row.customerName}`,
+    })
+  }
+
+  const parsedRows = lines
+    .map(parseNamedOrderLine)
+    .filter(Boolean)
+
+  if (parsedRows.length < 2) return []
+
+  return parsedRows.flatMap(row =>
+    parseSingleOrderText(row.orderText, list, parseMessageForItems, {
+      allowDirectRiceMention: true,
+      note: `Untuk: ${row.customerName}`,
+    })
+  )
+}
+
+const parseSegmentsForItems = (input, list, parseMessageForItems) => {
+  const structuredList = parseStructuredOrderList(input, list, parseMessageForItems)
+  if (structuredList.length > 0) return structuredList
+
+  return parseSingleOrderText(input, list, parseMessageForItems)
 }
 
 const getSmartRecommendations = (input, list) => {
@@ -717,7 +775,7 @@ export default function SmartOrderPage() {
     {
       id: 'welcome',
       sender: 'bot',
-      text: "Halo! Saya adalah AI Order Assistant.\nMenu apa yang ingin Anda pesan hari ini? Saya bisa membaca nama menu pendek, jumlah angka/kata, typo ringan, dan pilihan rasa pedas/tidak pedas. Contoh: 'dua nasi jeruk, 1 suwir pedas, 1 asam manis tidak pedas'.",
+      text: "Halo! Saya adalah AI Order Assistant.\nMenu apa yang ingin Anda pesan hari ini? Saya bisa membaca nama menu pendek, jumlah angka/kata, typo ringan, pilihan rasa, pilihan nasi, dan list pesanan kantor. Contoh: 'dua nasi jeruk, 1 suwir pedas, 1 asam manis tidak pedas'.",
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ])
@@ -1031,7 +1089,7 @@ export default function SmartOrderPage() {
         {
           id: 'welcome',
           sender: 'bot',
-          text: "Halo! Saya adalah AI Order Assistant.\nMenu apa yang ingin Anda pesan hari ini? Saya bisa membaca nama menu pendek, jumlah angka/kata, typo ringan, dan pilihan rasa pedas/tidak pedas. Contoh: 'dua nasi jeruk, 1 suwir pedas, 1 asam manis tidak pedas'.",
+          text: "Halo! Saya adalah AI Order Assistant.\nMenu apa yang ingin Anda pesan hari ini? Saya bisa membaca nama menu pendek, jumlah angka/kata, typo ringan, pilihan rasa, pilihan nasi, dan list pesanan kantor. Contoh: 'dua nasi jeruk, 1 suwir pedas, 1 asam manis tidak pedas'.",
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ])
@@ -1082,7 +1140,7 @@ export default function SmartOrderPage() {
                 }}>
                   <AlertCircle size={17} />
                 </div>
-                <span><strong>Format penting:</strong> Contoh: 1 ayam suwir pake nasi bom merah, 2 ayam katsu diganti nasi uduk. Pisahkan setiap menu dengan koma agar terbaca akurat.</span>
+                <span><strong>Format penting:</strong> Contoh: 1 ayam suwir pake nasi bom merah, 2 ayam katsu diganti nasi uduk. Bisa juga paste list kantor: exa - ayam suwir nasi bom merah. Pisahkan setiap menu dengan koma agar terbaca akurat.</span>
               </div>
             </div>
             <span style={{ fontSize: 11, color: '#10B981', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600, marginTop: 2 }}>
@@ -1212,13 +1270,17 @@ export default function SmartOrderPage() {
 
           {/* Message Input Box */}
           <div style={{ padding: 16, borderTop: '1px solid #E5E7EB', display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0 }}>
-            <input
+            <textarea
               ref={inputRef}
-              type="text"
               value={text}
               onChange={e => setText(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSend(text)}
-              placeholder="Ketik pesanan atau instruksi Anda di sini..."
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  handleSend(text)
+                }
+              }}
+              placeholder={'Ketik pesanan atau paste list kantor di sini...\nContoh:\nexa - ayam suwir nasi bom merah\nristek - salted egg nasi daun jeruk'}
               style={{
                 flex: 1,
                 padding: '12px 16px',
@@ -1226,7 +1288,12 @@ export default function SmartOrderPage() {
                 border: '1.5px solid #E5E7EB',
                 fontSize: 14,
                 outline: 'none',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s',
+                resize: 'none',
+                minHeight: isCompact ? 46 : 52,
+                maxHeight: 120,
+                lineHeight: 1.35,
+                fontFamily: 'inherit'
               }}
               onFocus={e => e.target.style.borderColor = '#DC2626'}
               onBlur={e => e.target.style.borderColor = '#E5E7EB'}
