@@ -274,6 +274,24 @@ const extractItemNote = (input) => {
   return ''
 }
 
+const cleanOrderCommandPrefix = (value = '') =>
+  value.replace(/^\s*(?:tambah|tambahkan|tambahin|pesan|order|mau|saya mau)\s+/i, '').trim()
+
+const extractRecipientFromText = (input) => {
+  const normalizedInput = input.trim()
+  const match = normalizedInput.match(/\s+(?:untuk|buat|atas\s+nama)\s+([A-Za-zÀ-ÿ0-9 ._]{2,40})\s*$/i)
+  if (!match) return { orderText: normalizedInput, note: '' }
+
+  const recipient = match[1].trim()
+  const normalizedRecipient = normalizeText(recipient)
+  if (!recipient || /\d/.test(normalizedRecipient)) return { orderText: normalizedInput, note: '' }
+
+  return {
+    orderText: normalizedInput.slice(0, match.index).trim(),
+    note: `Untuk: ${recipient}`,
+  }
+}
+
 const riceRequestOptions = [
   {
     option: 'Nasi Bom Merah',
@@ -594,27 +612,31 @@ const parseSpiceQuantitySplit = (input, list, parseMessageForItems, options = {}
 }
 
 const parseSingleOrderText = (input, list, parseMessageForItems, options = {}) => {
-  const splitBySpice = parseSpiceQuantitySplit(input, list, parseMessageForItems, {
+  const recipientData = extractRecipientFromText(input)
+  const orderInput = recipientData.orderText || input
+  const inheritedNote = options.note || recipientData.note || ''
+
+  const splitBySpice = parseSpiceQuantitySplit(orderInput, list, parseMessageForItems, {
     allowDirectRiceMention: options.allowDirectRiceMention === true,
   })
   if (splitBySpice.length > 0) {
     return splitBySpice.map(item => ({
       ...item,
-      note: options.note || item.note || '',
+      note: inheritedNote || item.note || '',
     }))
   }
 
-  const segments = splitOrderSegments(input)
+  const segments = splitOrderSegments(orderInput)
   const shouldReadRiceAsBowlOption = options.allowDirectRiceMention === true
   const parsed = []
   const usedKeys = new Set()
 
-  const sourceSegments = segments.length > 1 ? segments : [input]
+  const sourceSegments = segments.length > 1 ? segments : [orderInput]
   sourceSegments.forEach(segment => {
     const segmentItems = parseMessageForItems(segment, list)
     const customBowlCount = segmentItems.filter(item => isCustomizableBowl(item)).length
     const hasRiceOption = Boolean(getMentionedRiceOption(segment))
-    const segmentNote = options.note || extractItemNote(segment)
+    const segmentNote = inheritedNote || extractItemNote(segment)
 
     segmentItems.forEach(item => {
       if (shouldReadRiceAsBowlOption && customBowlCount > 0 && hasRiceOption && isRiceMenuItem(item)) return
@@ -656,11 +678,12 @@ const parseSingleOrderText = (input, list, parseMessageForItems, options = {}) =
 }
 
 const parseNamedOrderLine = (line) => {
-  const match = line.match(/^\s*([A-Za-zÀ-ÿ0-9 ._]{2,40}?)\s*(?:-|:|–|—)\s*(.+)$/)
+  const cleanedLine = cleanOrderCommandPrefix(line)
+  const match = cleanedLine.match(/^\s*([A-Za-zÀ-ÿ0-9 ._]{2,40}?)\s*(?:-|:|–|—)\s*(.+)$/)
   if (!match) return null
 
-  const customerName = match[1].trim()
-  const orderText = match[2].trim()
+  const customerName = cleanOrderCommandPrefix(match[1]).trim()
+  const orderText = cleanOrderCommandPrefix(match[2]).trim()
   const normalizedName = normalizeText(customerName)
 
   if (!customerName || !orderText) return null
