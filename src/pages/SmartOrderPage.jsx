@@ -277,11 +277,11 @@ const extractItemNote = (input) => {
 const riceRequestOptions = [
   {
     option: 'Nasi Bom Merah',
-    aliases: ['nasi bom merah', 'nasi bom', 'bom merah', 'nasi merah', 'bom pedas'],
+    aliases: ['nasi bom merah', 'nasi bom', 'bom merah', 'nasi merah', 'bom pedas', 'merah'],
   },
   {
     option: 'Nasi Daun Jeruk',
-    aliases: ['nasi daun jeruk', 'nasi jeruk', 'daun jeruk'],
+    aliases: ['nasi daun jeruk', 'nasi jeruk', 'daun jeruk', 'jeruk'],
   },
   {
     option: 'Nasi Uduk',
@@ -289,7 +289,7 @@ const riceRequestOptions = [
   },
   {
     option: defaultRiceOption,
-    aliases: ['nasi biasa', 'nasi putih', 'nasi polos'],
+    aliases: ['nasi biasa', 'nasi putih', 'nasi polos', 'putih', 'polos', 'biasa'],
   },
 ]
 
@@ -306,13 +306,14 @@ const riceOptionAliasPattern = riceOptionAliasLookup
   .map(entry => escapeRegex(entry.alias))
   .join('|')
 
-const getMentionedRiceOption = (input) => {
+const getMentionedRiceOption = (input, options = {}) => {
   const normalized = normalizeText(input)
   const hasRiceWord = /\bnasi\b/.test(normalized)
+  const allowShortAlias = options.allowShortAlias === true
 
   for (const entry of riceOptionAliasLookup) {
     const found = new RegExp(`(^|\\s)${escapeRegex(entry.alias)}(?=\\s|$)`).test(normalized)
-    if (found && (hasRiceWord || entry.option === 'Nasi Uduk')) return entry.option
+    if (found && (allowShortAlias || hasRiceWord || entry.option === 'Nasi Uduk')) return entry.option
   }
 
   return ''
@@ -322,7 +323,7 @@ const getRequestedRiceOption = (input) => {
   const normalized = normalizeText(input)
   if (!riceChangeIntentPattern.test(normalized)) return ''
 
-  return getMentionedRiceOption(input)
+  return getMentionedRiceOption(input, { allowShortAlias: true })
 }
 
 const hasRiceReplacementRequest = (input) => Boolean(getRequestedRiceOption(input))
@@ -420,8 +421,12 @@ const extractQuantityCustomizationGroups = (input) => {
     `(?:^|\\s)(${quantityPattern})\\s*(?:x|pcs|porsi)?\\s+(?:pake|pakai|pakek|diganti|ganti|dengan)?\\s*(${riceOptionAliasPattern})\\s+${spicePattern}(?=\\s|$)`,
     'g'
   )
+  const quantityIntentRicePattern = new RegExp(
+    `(?:^|\\s)(${quantityPattern})\\s*(?:x|pcs|porsi)?\\s+(?:ganti|diganti|gantinya|gantiin|digantiin|pake|pakai|pakek|gunakan|ubah|rubah|dengan)\\s+(${riceOptionAliasPattern})(?=\\s|$)`,
+    'g'
+  )
 
-  const addGroup = (match, riceAlias, spiceText) => {
+  const addGroup = (match, riceAlias, spiceText = '') => {
     const rangeKey = `${match.index}:${match[0].length}`
     if (seenRanges.has(rangeKey)) return
     seenRanges.add(rangeKey)
@@ -432,7 +437,9 @@ const extractQuantityCustomizationGroups = (input) => {
     groups.push({
       quantity: parseQuantityValue(match[1]),
       rice: riceOption,
-      spice: /\b(tidak|ga|gak|nggak|enggak)\s+pedas\b/.test(normalizeText(spiceText)) ? 'Tidak Pedas' : 'Pedas',
+      spice: spiceText
+        ? (/\b(tidak|ga|gak|nggak|enggak)\s+pedas\b/.test(normalizeText(spiceText)) ? 'Tidak Pedas' : 'Pedas')
+        : '',
       start: match.index,
       end: match.index + match[0].length,
     })
@@ -444,6 +451,10 @@ const extractQuantityCustomizationGroups = (input) => {
 
   for (const match of normalized.matchAll(quantityRiceSpicePattern)) {
     addGroup(match, match[2], match[3])
+  }
+
+  for (const match of normalized.matchAll(quantityIntentRicePattern)) {
+    addGroup(match, match[2])
   }
 
   return groups.sort((a, b) => a.start - b.start)
