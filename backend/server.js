@@ -778,6 +778,7 @@ app.get('/api/events/admin', (req, res) => {
 // Categories
 app.get('/api/categories', async (req, res) => {
   try {
+    await databaseReady;
     const [results] = await queryAsync('SELECT * FROM categories ORDER BY name ASC');
     res.json(results);
   } catch (err) {
@@ -812,6 +813,7 @@ app.delete('/api/categories/:id', requireAdmin, (req, res) => {
 // Menu Items
 app.get('/api/menu', async (req, res) => {
   try {
+    await databaseReady;
     const [results] = await queryAsync('SELECT * FROM menu_items ORDER BY id ASC');
     const formatted = results.map(item => ({
       ...item,
