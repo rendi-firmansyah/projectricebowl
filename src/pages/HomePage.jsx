@@ -250,14 +250,6 @@ export default function HomePage() {
                 <Link to="/menu" style={{ fontSize: 14, color: '#9CA3AF', textDecoration: 'none' }}>Add-ons</Link>
               </div>
             </div>
-            <div>
-              <h4 style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1, color: '#6B7280' }}>Company</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <a href="#" style={{ fontSize: 14, color: '#9CA3AF', textDecoration: 'none' }}>About Us</a>
-                <a href="#" style={{ fontSize: 14, color: '#9CA3AF', textDecoration: 'none' }}>Careers</a>
-                <a href="#" style={{ fontSize: 14, color: '#9CA3AF', textDecoration: 'none' }}>Contact</a>
-              </div>
-            </div>
           </div>
         </div>
         <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: 20, marginTop: 20, textAlign: 'center', fontSize: 12, color: '#D1D5DB' }}>
