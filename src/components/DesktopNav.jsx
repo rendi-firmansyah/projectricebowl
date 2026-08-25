@@ -2,6 +2,7 @@ import { NavLink, useLocation, Link } from 'react-router-dom'
 import { Home, UtensilsCrossed, ShoppingCart, User, Zap } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
+import coupleBowlLogo from '../assets/couple-bowl-logo.png'
 
 const navItems = [
   { to: '/', label: 'Home', icon: Home },
@@ -23,7 +24,7 @@ export default function DesktopNav() {
       <div className="desktop-nav-inner">
         {/* Logo */}
         <Link to="/" className="desktop-nav-logo">
-          <div className="desktop-nav-logo-icon">CB</div>
+          <img className="desktop-nav-logo-icon" src={coupleBowlLogo} alt="Couple Bowl" />
           <span className="desktop-nav-logo-text">Couple Bowl</span>
         </Link>
 

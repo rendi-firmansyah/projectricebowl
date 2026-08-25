@@ -8,6 +8,7 @@ import { getCachedMenuItems, getMenuItems, formatPrice, optimizeImageUrl } from 
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import AddOnModal from '../components/AddOnModal'
+import coupleBowlLogo from '../assets/couple-bowl-logo.png'
 
 const howItWorks = [
   { icon: <UtensilsCrossed />, title: 'Choose Menu', desc: 'Browse our curated bowl selections', color: '#DC2626', bg: '#FEE2E2' },
@@ -113,11 +114,11 @@ export default function HomePage() {
           </div>
           <div className="home-hero-image-wrap animate-float">
             <img
-              src={optimizeImageUrl('https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&h=400&fit=crop', 420)}
-              alt="Bowl"
+              src={coupleBowlLogo}
+              alt="Couple Bowl"
               loading="eager"
               decoding="async"
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
             />
           </div>
         </div>
@@ -235,7 +236,7 @@ export default function HomePage() {
         <div className="home-footer-inner">
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, #DC2626, #EF4444)', color: 'white', fontWeight: 800, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>CB</div>
+              <img src={coupleBowlLogo} alt="Couple Bowl" style={{ width: 42, height: 42, objectFit: 'contain', display: 'block' }} />
               <span style={{ fontSize: 18, fontWeight: 800, fontFamily: 'var(--font-family-display)' }}>Couple Bowl</span>
             </div>
             <p style={{ fontSize: 13, color: '#9CA3AF', maxWidth: 300, lineHeight: 1.6 }}>Fresh, healthy & delicious bowls crafted with love. The perfect meal for every couple.</p>
