@@ -63,7 +63,7 @@ export const fallbackMenuImage = (label = 'Menu') => {
 
 export const cleanMenuName = (name = '') => name
 
-const MENU_CACHE_KEY = 'couple_bowl_menu_cache_v1'
+const MENU_CACHE_KEY = 'couple_bowl_menu_cache_v2'
 
 const normalizeMenuItem = (item = {}) => ({
   ...item,
@@ -420,8 +420,7 @@ export const getMenuItems = async () => {
 }
 
 export const getCachedMenuItems = () => {
-  const cachedItems = readCachedMenuItems()
-  return cachedItems.length > 0 ? cachedItems : menuItems.map(normalizeMenuItem)
+  return readCachedMenuItems()
 }
 
 export const saveMenuItems = async (items) => {
