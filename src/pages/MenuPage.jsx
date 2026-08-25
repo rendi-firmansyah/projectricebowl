@@ -10,20 +10,36 @@ const isMenuSoldOut = (item) => String(item?.status || 'Tersedia').toLowerCase()
 const defaultMenuCategories = defaultCategories.filter(category => category.id !== 'all')
 
 export default function MenuPage() {
+  const initialMenuState = () => {
+    const items = getCachedMenuItems()
+    return { items, loading: items.length === 0 }
+  }
+  const [menuState, setMenuState] = useState(initialMenuState)
   const [activeCategory, setActiveCategory] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   const [viewMode, setViewMode] = useState('grid')
-  const [menuList, setMenuList] = useState(() => getCachedMenuItems())
   const [categories, setCategories] = useState(defaultMenuCategories)
   const [selectedAddOnItem, setSelectedAddOnItem] = useState(null)
   const [favoriteIds, setFavoriteIds] = useState([])
   const { addItem } = useCart()
   const { user } = useAuth()
+  const menuList = menuState.items
+  const isMenuLoading = menuState.loading
 
   useEffect(() => {
-    getMenuItems().then(data => setMenuList(data))
+    let isMounted = true
+
+    getMenuItems()
+      .then(data => {
+        if (isMounted) setMenuState({ items: data, loading: false })
+      })
+      .catch(error => {
+        console.error('Error fetching menu:', error)
+        if (isMounted) setMenuState(prev => ({ ...prev, loading: false }))
+      })
+
     fetch('/api/categories')
       .then(async r => {
         const data = await r.json().catch(() => [])
@@ -35,6 +51,10 @@ export default function MenuPage() {
         console.error('Error fetching categories:', error)
         setCategories(defaultMenuCategories)
       })
+
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   useEffect(() => {
@@ -120,10 +140,29 @@ export default function MenuPage() {
 
       {/* Menu Items */}
       <div className="menu-content">
-        <div className="menu-item-count">{filteredItems.length} items found</div>
+        <div className="menu-item-count">
+          {isMenuLoading ? 'Memuat menu...' : `${filteredItems.length} items found`}
+        </div>
 
         <div className={`menu-items-grid ${viewMode === 'list' ? 'menu-items-list' : ''}`}>
-          {filteredItems.map((item, i) => {
+          {isMenuLoading ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className={`menu-item-card ${viewMode} menu-item-skeleton`}>
+                <div className="menu-item-image menu-skeleton-block" />
+                <div className="menu-item-info">
+                  <div className="menu-item-info-top">
+                    <div className="menu-skeleton-line title" />
+                    <div className="menu-skeleton-line" />
+                    <div className="menu-skeleton-line short" />
+                  </div>
+                  <div className="menu-item-bottom">
+                    <div className="menu-skeleton-line price" />
+                    <div className="menu-skeleton-circle" />
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : filteredItems.map((item, i) => {
             const soldOut = isMenuSoldOut(item)
             return (
             <div key={item.id} className={`animate-fade-in card-hover menu-item-card ${viewMode} ${soldOut ? 'sold-out' : ''}`} style={{ animationDelay: `${i * 0.04}s`, opacity: 0 }}>
